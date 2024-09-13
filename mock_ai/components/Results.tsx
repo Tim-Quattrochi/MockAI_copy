@@ -6,8 +6,9 @@ import { useUser } from "@auth0/nextjs-auth0/client";
 import { Button } from "./ui/Button";
 import { Progress } from "./ui/progress";
 import { useRouter } from "next/navigation";
-import { Info } from "lucide-react";
+import { Info, ClipboardPenLine } from "lucide-react";
 import { useToast } from "@/hooks/useToast";
+import { Result } from "@/types";
 
 import {
   Card,
@@ -16,19 +17,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Checkbox } from "./ui/checkbox";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "./ui/skeleton";
-import { Save, LogOut, Play, Loader2 } from "lucide-react";
-
-interface Result {
-  question: string;
-  transcript: string;
-  filler_words: number;
-  long_pauses: number;
-  pause_durations: number;
-  interview_date: string;
-  ai_feedback?: string;
-}
+import { Save, LogOut, Play } from "lucide-react";
+import AnalysisCard from "./AnalysisCard";
+import { abort } from "process";
 
 const Results = () => {
   const { user, isLoading: userLoading } = useUser();
@@ -38,6 +30,7 @@ const Results = () => {
   const [resultsLoading, setResultsLoading] = useState(true);
   const [email, setEmail] = useState(user?.email);
   const [resultsSaved, setResultsSaved] = useState(false);
+  const [analysisError, setAnalysisError] = useState(false);
 
   const { toast } = useToast();
 
@@ -48,18 +41,26 @@ const Results = () => {
   }, [user?.email]);
 
   useEffect(() => {
+    const controller = new AbortController();
     if (email) {
-      fetchResults();
+      fetchResults(controller);
     }
+    return () => {
+      controller.abort();
+    };
   }, [email]);
 
-  const fetchResults = async () => {
+  const fetchResults = async (controller: AbortController) => {
     setResultsLoading(true);
     try {
-      const response = await axios.get("/service/get_results", {
-        params: { user: email },
-        headers: { "Content-Type": "application/json" },
-      });
+      const response = await axios.get<Result>(
+        "/service/get_results",
+        {
+          params: { user: email },
+          headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
+        }
+      );
       const fetchedResults = [response.data];
       setResults(fetchedResults);
       console.log("Fetched results:", fetchedResults);
@@ -72,6 +73,7 @@ const Results = () => {
   };
 
   const fetchAIAnalysis = async (fetchedResults: Result[]) => {
+    setAnalysisError(false);
     if (email) {
       const needsAnalysis = fetchedResults.some(
         (result) => !result.ai_feedback
@@ -103,6 +105,7 @@ const Results = () => {
           updatedResults
         );
       } catch (error) {
+        setAnalysisError(true);
         console.error("Error fetching analysis:", error);
       } finally {
         setAnalysisLoading(false);
@@ -209,7 +212,10 @@ const Results = () => {
             className="bg-[#0a0b24] border-[#2e2f61] mb-6"
           >
             <CardHeader>
-              <CardTitle className="text-[#7fceff]">Report</CardTitle>
+              <CardTitle className="flex text-[#7fceff] mx-auto">
+                Report
+                <ClipboardPenLine className="ml-4 h-6 w-6 text-[#5fbfd7]" />
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
@@ -323,33 +329,14 @@ const Results = () => {
         </Card>
       )}
 
-      <Card className="bg-[#0a0b24] border-[#2e2f61] mb-6">
-        <CardHeader>
-          <CardTitle className="text-[#7fceff] flex justify-between items-center mx-auto">
-            Mock AI Analysis
-            {analysisLoading && (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {analysisLoading ? (
-            <p className="text-[#f0f0f0]">
-              Analyzing your answers...
-            </p>
-          ) : (
-            <ScrollArea className="h-[200px] w-full rounded-md border p-4">
-              {results.map((result, index) => (
-                <div key={index} className="mb-1">
-                  <p className="text-[#f0f0f0]">
-                    {result.ai_feedback || "No analysis available."}
-                  </p>
-                </div>
-              ))}
-            </ScrollArea>
-          )}
-        </CardContent>
-      </Card>
+      <AnalysisCard
+        title="Mock AI Analysis"
+        type="analysis"
+        content={results}
+        isLoading={analysisLoading}
+        hasError={analysisError}
+        handleRetry={() => fetchAIAnalysis(results)}
+      />
 
       {/* Hide the save results checkbox and button when the results are already saved.*/}
       {!resultsSaved && (
