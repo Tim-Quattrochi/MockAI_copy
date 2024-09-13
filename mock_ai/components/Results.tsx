@@ -178,14 +178,11 @@ const Results = () => {
             <p className="text-[#f0f0f0] mb-4 text-center">
               Sorry, but you must be signed in to review your results.
             </p>
-            <Button
-              asChild
-              className="w-full bg-[#7fceff] text-[#050614] hover:bg-[#7fceff]/90"
-            >
-              <a href="/api/auth/login">
+            <a href="/api/auth/login">
+              <Button className="w-full bg-[#7fceff] text-[#050614] hover:bg-[#7fceff]/90">
                 Sign In to Review Your Results
-              </a>
-            </Button>
+              </Button>
+            </a>
           </CardContent>
         </Card>
       </div>

@@ -39,20 +39,20 @@ const Header = () => {
             >
               Account
             </Link>
-            <Link
+            <a
               className="text-sm font-medium hover:text-[#ff3b9a] transition-colors"
               href="/api/auth/logout"
             >
               Logout
-            </Link>
+            </a>
           </>
         ) : (
-          <Link
+          <a
             className="text-sm font-medium hover:text-[#ff3b9a] transition-colors"
             href="/api/auth/login"
           >
             Login
-          </Link>
+          </a>
         )}
       </nav>
     </header>

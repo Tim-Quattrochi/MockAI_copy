@@ -102,6 +102,7 @@ const Interview = () => {
       </div>
     );
   }
+  console.log(error);
 
   if (!user) {
     return (
@@ -113,17 +114,17 @@ const Interview = () => {
           <p className="text-lg mt-4 text-center">
             Sorry, but you must be signed in to start your interview.
           </p>
-          {/* 'asChild prop on the Button allows the a tag to render but keep the styles of the Button.*/}
+
+          {/* https://community.auth0.com/t/next-js-cors-error-on-authorize-endpoint/136253 */}
           <div className="flex justify-center">
-            <Button
-              asChild
-              variant={"ghost"}
-              className="bg-primary-blue text-white mt-10 rounded-full"
-            >
-              <a href="/api/auth/login">
+            <a href="/api/auth/login">
+              <Button
+                variant={"ghost"}
+                className="bg-primary-blue text-white mt-10 rounded-full"
+              >
                 Sign In to Start Your Interview
-              </a>
-            </Button>
+              </Button>
+            </a>
           </div>
         </div>
       </div>
