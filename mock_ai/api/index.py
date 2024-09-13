@@ -332,7 +332,7 @@ def generate_ai_response():
 
         # Generate the AI feedback prompt using the user's information
         prompt = generate_feedback_prompt(
-            name, company, position, interview_type, question)
+            name, company, position, interview_type, question.question)  # question.question contains the question text
         gemini_response = prompt_with_audio_file(audio_content, prompt)
 
         logging.info(f"Received response from Gemini: {gemini_response}")
