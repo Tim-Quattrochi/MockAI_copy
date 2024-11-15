@@ -1,0 +1,10 @@
+{
+  "scripts": {
+    "dev:mock_ai": "npm run dev --workspace=mock_ai",
+    "dev:admin": "npm run dev --workspace=admin",
+    "build:admin": "next build"
+  },
+  "workspaces": [
+    "apps/*"
+  ]
+}
