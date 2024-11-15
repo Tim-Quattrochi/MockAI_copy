@@ -49,6 +49,8 @@ import {
   AlertDialogHeader,
   AlertDialogFooter,
 } from "./ui/alert-dialog";
+import { Spinner } from "./ui/spinner";
+import { formatPauseDurations } from "@/lib/formatSeconds";
 
 interface FillerWords {
   [key: string]: number;
@@ -61,7 +63,7 @@ interface InterviewResult {
   transcript: string;
   filler_words: string;
   long_pauses: number;
-  pause_durations: number;
+  pause_durations: number | number[];
   ai_feedback: string;
   interview_date: string;
   video_url: string | null;
@@ -71,7 +73,7 @@ interface InterviewResult {
 type FilterType = "all" | "video" | "voice";
 
 export default function UserAccount() {
-  const { user, isLoading } = useUser();
+  const { user, isLoading: userLoading } = useUser();
   const [results, setResults] = useState<InterviewResult[]>([]);
   const [filteredResults, setFilteredResults] = useState<
     InterviewResult[]
@@ -187,10 +189,10 @@ export default function UserAccount() {
     );
   };
 
-  if (isLoading) {
+  if (userLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        Loading...
+        <Spinner size="large" className="w-[300px] h-[20px]" />
       </div>
     );
   }
@@ -208,7 +210,7 @@ export default function UserAccount() {
       </div>
     );
   }
-  console.log(user.picture);
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50 p-4 md:p-8">
       <div className="max-w-4xl mx-auto space-y-8">
@@ -303,8 +305,10 @@ export default function UserAccount() {
                           <p className="text-sm text-slate-400">
                             Score
                           </p>
-                          <p className="text-2xl font-bold">
-                            {result.score}
+                          <p className="text-1xl font-bold">
+                            {result.score
+                              ? result.score
+                              : "Score not available"}
                           </p>
                         </div>
                         <div>
@@ -323,7 +327,9 @@ export default function UserAccount() {
                           Transcript
                         </p>
                         <p className="text-slate-300 line-clamp-3">
-                          {result.transcript}
+                          {result.transcript
+                            ? result.transcript
+                            : "Transcript not available"}
                         </p>
                       </div>
                       <div>
@@ -362,7 +368,9 @@ export default function UserAccount() {
                             Pause Durations
                           </p>
                           <p className="text-lg font-bold">
-                            {result.pause_durations}
+                            {formatPauseDurations(
+                              result.pause_durations
+                            )}
                           </p>
                         </div>
                       </div>
