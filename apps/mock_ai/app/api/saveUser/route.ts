@@ -2,12 +2,13 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
-  try {
-    const { email, name } = await request.json();
+  const { searchParams } = new URL(request.url);
+  const email = searchParams.get("email");
 
+  try {
     if (!email || !name) {
       return NextResponse.json(
-        { status: "error", message: "Email and Name are required" },
+        { status: "error", message: "Email and Name is required" },
         { status: 400 }
       );
     }
