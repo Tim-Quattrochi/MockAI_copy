@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -24,38 +18,35 @@ model User {
 }
 
 model Question {
-  id             String   @id @default(uuid()) @db.Uuid
-  question       String
-  name           String
-  company        String
-  position       String
-  interviewType  String   @map("interview_type")
-  results        Result[]
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id            String   @id @default(uuid()) @db.Uuid
+  question      String
+  name          String
+  company       String
+  position      String
+  interviewType String   @map("interview_type")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  results       Result[]
 }
 
 model Result {
-  id             String   @id @default(uuid()) @db.Uuid
-  userId         String   @map("user_id") @db.Uuid
-  questionId     String   @map("question_id") @db.Uuid
+  id             String    @id @default(uuid()) @db.Uuid
+  userId         String    @map("user_id") @db.Uuid
+  questionId     String    @map("question_id") @db.Uuid
   updatedAt      DateTime? @default(now()) @map("updated_at")
   score          Float?
   transcript     String
-  fillerWords    Json      @map("filler_words") // Switched to Json for structured data
-  longPauses     Json      @map("long_pauses")  // Switched to Json for structured data
+  fillerWords    Json      @map("filler_words")
+  longPauses     Json      @map("long_pauses")
   pauseDurations String?   @map("pause_durations")
   aiFeedback     String?   @map("ai_feedback")
   audioUrl       String?   @map("audio_url")
   videoUrl       String?   @map("video_url")
   interviewDate  DateTime? @default(now()) @map("interview_date")
-
-  // The relation is defined here for the user
-  user           User      @relation("UserResults", fields: [userId], references: [id], onDelete: Cascade)
   questionRel    Question  @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  user           User      @relation("UserResults", fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId], map: "idx_user_id")
   @@index([questionId], map: "idx_question_id")
   @@map("results")
 }
-
