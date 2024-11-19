@@ -27,7 +27,10 @@ model Question {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   results       Result[]
+
+  @@map("Question") 
 }
+
 
 model Result {
   id             String    @id @default(uuid()) @db.Uuid
