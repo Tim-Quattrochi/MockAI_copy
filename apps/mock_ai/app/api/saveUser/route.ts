@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 export async function POST(request: Request) {
   const { searchParams } = new URL(request.url);
   const email = searchParams.get("email");
+  const name = searchParams.get("name");
 
   try {
     if (!email || !name) {
