@@ -1,26 +1,31 @@
-import { sql } from "@vercel/postgres";
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma"; // Make sure to import Prisma client (adjust path if necessary)
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const email = searchParams.get("email");
-
+export async function POST(request: Request) {
   try {
-    if (!email) {
+    const { email, name } = await request.json(); // Get email and name from the request body
+
+    if (!email || !name) {
       return NextResponse.json(
-        { status: "error", message: "Email is required" },
+        { status: "error", message: "Email and Name are required" },
         { status: 400 }
       );
     }
 
-    await sql`INSERT INTO Users (email) VALUES (${email}) ON CONFLICT DO NOTHING;`;
+    // Save the user to Supabase (or your Prisma database)
+    await prisma.user.create({
+      data: {
+        email,
+        name,
+      },
+    });
 
     return NextResponse.json(
-      { status: "success", message: "User added" },
+      { status: "success", message: "User saved successfully" },
       { status: 200 }
     );
   } catch (error) {
-    console.error("Database error:", error);
+    console.error("Error saving user to Supabase:", error);
     return NextResponse.json(
       { status: "error", message: "Database error" },
       { status: 500 }

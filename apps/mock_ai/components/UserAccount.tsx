@@ -4,41 +4,45 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useUser } from "@auth0/nextjs-auth0/client";
 import Link from "next/link";
+
+// Hooks
 import { useToast } from "@/hooks/useToast";
+
+// UI components
 import {
-  ChevronDown,
-  ChevronUp,
-  Trash2,
-  Video,
-  Mic,
-} from "lucide-react";
-import {
+  Button,
+  Skeleton,
+  ScrollArea,
+  Spinner,
   Avatar,
   AvatarFallback,
   AvatarImage,
-} from "../components/ui/avatar";
-import { Button } from "../components/ui/Button";
-import {
   Card,
   CardContent,
   CardFooter,
   CardHeader,
   CardTitle,
-} from "../components/ui/card";
-import { ScrollArea } from "../components/ui/scroll-area";
-import { Skeleton } from "../components/ui/skeleton";
-import {
+  Label,
+  RadioGroup,
+  RadioGroupItem,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../components/ui/select";
+} from "../components/ui";
+import VideoPlayer from "./VideoPlayer";
+// Pagination components
 import {
-  RadioGroup,
-  RadioGroupItem,
-} from "../components/ui/radio-group";
-import { Label } from "../components/ui/label";
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from "./ui/pagination";
+// Alert Dialog components
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,8 +53,18 @@ import {
   AlertDialogHeader,
   AlertDialogFooter,
 } from "./ui/alert-dialog";
-import { Spinner } from "./ui/spinner";
+// Icons
+import {
+  ChevronDown,
+  ChevronUp,
+  Trash2,
+  Video,
+  Mic,
+} from "lucide-react";
+// Utilities
 import { formatPauseDurations } from "@/lib/formatSeconds";
+//types
+import { FilterType } from "@/types";
 
 interface FillerWords {
   [key: string]: number;
@@ -70,8 +84,6 @@ interface InterviewResult {
   audio_url: string | null;
 }
 
-type FilterType = "all" | "video" | "voice";
-
 export default function UserAccount() {
   const { user, isLoading: userLoading } = useUser();
   const [results, setResults] = useState<InterviewResult[]>([]);
@@ -88,8 +100,94 @@ export default function UserAccount() {
   const [selectedResultId, setSelectedResultId] = useState<
     number | null
   >(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const resultsPerPage = 5;
 
   const { toast, dismiss } = useToast();
+
+  const paginatedResults = filteredResults.slice(
+    (currentPage - 1) * resultsPerPage,
+    currentPage * resultsPerPage
+  );
+
+  const totalPages = Math.ceil(
+    filteredResults.length / resultsPerPage
+  );
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const renderPageLinks = () => {
+    const pages = [];
+    const maxVisiblePages = 5; // Max number of pages to show at once
+    const halfVisible = Math.floor(maxVisiblePages / 2);
+
+    // First, determine the visible range
+    let startPage = Math.max(currentPage - halfVisible, 1);
+    let endPage = Math.min(currentPage + halfVisible, totalPages);
+
+    // Ensure the visible pages range stays within the page count
+    if (currentPage <= halfVisible) {
+      endPage = Math.min(maxVisiblePages, totalPages);
+    } else if (currentPage > totalPages - halfVisible) {
+      startPage = Math.max(totalPages - maxVisiblePages + 1, 1);
+    }
+
+    // Add "First" page link if needed
+    if (startPage > 1) {
+      pages.push(
+        <PaginationItem key="first">
+          <PaginationLink onClick={() => handlePageChange(1)}>
+            1
+          </PaginationLink>
+        </PaginationItem>
+      );
+      if (startPage > 2) {
+        pages.push(
+          <PaginationItem key="start-ellipsis">
+            <PaginationEllipsis />
+          </PaginationItem>
+        );
+      }
+    }
+
+    // Add the visible page range
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(
+        <PaginationItem key={i}>
+          <PaginationLink
+            isActive={i === currentPage}
+            onClick={() => handlePageChange(i)}
+          >
+            {i}
+          </PaginationLink>
+        </PaginationItem>
+      );
+    }
+
+    // Add "Last" page link if needed
+    if (endPage < totalPages) {
+      if (endPage < totalPages - 1) {
+        pages.push(
+          <PaginationItem key="end-ellipsis">
+            <PaginationEllipsis />
+          </PaginationItem>
+        );
+      }
+      pages.push(
+        <PaginationItem key="last">
+          <PaginationLink
+            onClick={() => handlePageChange(totalPages)}
+          >
+            {totalPages}
+          </PaginationLink>
+        </PaginationItem>
+      );
+    }
+
+    return pages;
+  };
 
   const showToast = (
     title: string,
@@ -284,8 +382,8 @@ export default function UserAccount() {
               <Skeleton className="h-[200px] w-full" />
             </div>
           ) : filteredResults.length > 0 ? (
-            <div className="space-y-4">
-              {filteredResults.map((result) => {
+            <div>
+              {paginatedResults.map((result) => {
                 const fillerWords: FillerWords = JSON.parse(
                   result.filler_words
                 );
@@ -295,6 +393,9 @@ export default function UserAccount() {
                     className="bg-slate-900 border-slate-800"
                   >
                     <CardHeader>
+                      <p className="text-xl text-slate-400 mb-1">
+                        Question
+                      </p>
                       <CardTitle className="text-xl text-slate-200">
                         {result.question}
                       </CardTitle>
@@ -352,6 +453,7 @@ export default function UserAccount() {
                                 </p>
                               </div>
                             ))}
+                          0
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
@@ -408,21 +510,14 @@ export default function UserAccount() {
                         </div>
                       )}
                       {result.video_url && (
-                        <div>
-                          <Button
-                            asChild
-                            variant="outline"
-                            className="w-full"
-                          >
-                            <a
-                              href={result.video_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              <Video className="mr-2 h-4 w-4" />
-                              View Interview Video
-                            </a>
-                          </Button>
+                        <div className="p-4">
+                          <h1 className="text-xl font-semibold mb-4">
+                            Interview Video
+                          </h1>
+                          <VideoPlayer
+                            controls={true}
+                            src={result.video_url}
+                          />
                         </div>
                       )}
                       {result.audio_url && !result.video_url && (
@@ -450,7 +545,9 @@ export default function UserAccount() {
                         onClick={() => handleOpenDialog(result.id)}
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
-                        Delete Result
+                        <span className="font-bold">
+                          Delete Result
+                        </span>
                       </Button>
                       <AlertDialog
                         open={dialogOpen}
@@ -497,9 +594,59 @@ export default function UserAccount() {
             </Card>
           )}
         </div>
+        <div className="space-y-4">
+          {paginatedResults.map((result) => (
+            <Card
+              key={result.id}
+              className="bg-slate-900 border-slate-800"
+            ></Card>
+          ))}
+
+          <Pagination className="mt-4">
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  onClick={() =>
+                    handlePageChange(Math.max(1, currentPage - 1))
+                  }
+                  className={currentPage === 1 ? "disabled" : ""}
+                />
+              </PaginationItem>
+
+              {/* Ellipsis for large page numbers */}
+              {currentPage > 3 && (
+                <PaginationItem>
+                  <PaginationEllipsis />
+                </PaginationItem>
+              )}
+
+              {/* Render dynamically generated page links */}
+              {renderPageLinks()}
+
+              {currentPage < totalPages - 2 && (
+                <PaginationItem>
+                  <PaginationEllipsis />
+                </PaginationItem>
+              )}
+
+              <PaginationItem>
+                <PaginationNext
+                  onClick={() =>
+                    handlePageChange(
+                      Math.min(totalPages, currentPage + 1)
+                    )
+                  }
+                  className={
+                    currentPage === totalPages ? "disabled" : ""
+                  }
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
 
         <div className="flex flex-col sm:flex-row gap-4">
-          <Button asChild className="flex-1">
+          <Button asChild className="flex-1" variant={"primary"}>
             <Link href="/interview">Start New Interview</Link>
           </Button>
           <Button asChild variant="outline" className="flex-1">

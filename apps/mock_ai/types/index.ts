@@ -28,3 +28,5 @@ export type Result = {
   video_url?: string;
   score?: number;
 };
+
+export type FilterType = "all" | "video" | "voice";

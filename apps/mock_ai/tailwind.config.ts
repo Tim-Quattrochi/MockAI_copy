@@ -26,6 +26,7 @@ module.exports = {
         },
         grey: "#747A88",
         midnight: "#0B0A10",
+        destructive: "red",
         muted: {
           DEFAULT: "#F2F1F9",
           foreground: "#72717C",

@@ -1,0 +1,54 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id        String   @id @default(uuid()) @db.Uuid
+  email     String   @unique
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+    results   Result[] @relation("UserResults")
+}
+
+model Question {
+  id             String   @id @default(uuid()) @db.Uuid
+  question       String
+  name           String
+  company        String
+  position       String
+  interviewType  String   @map("interview_type")
+  results        Result[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Result {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  questionId     String   @map("question_id") @db.Uuid
+  updatedAt      DateTime? @default(now()) @map("updated_at")
+  score          Float?
+  transcript     String
+  fillerWords    Json      @map("filler_words") // Switched to Json for structured data
+  longPauses     Json      @map("long_pauses")  // Switched to Json for structured data
+  pauseDurations String?   @map("pause_durations")
+  aiFeedback     String?   @map("ai_feedback")
+  audioUrl       String?   @map("audio_url")
+  videoUrl       String?   @map("video_url")
+  interviewDate  DateTime? @default(now()) @map("interview_date")
+
+  // The relation is defined here for the user
+  user           User      @relation("UserResults", fields: [userId], references: [id], onDelete: Cascade)
+  questionRel    Question  @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "idx_user_id")
+  @@index([questionId], map: "idx_question_id")
+  @@map("results")
+}
