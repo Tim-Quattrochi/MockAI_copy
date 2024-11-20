@@ -5,7 +5,7 @@ import axios from "axios";
 
 function useUploadAudio() {
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<null | string>(null);
 
   const uploadAudio = async (
     audioBlob: Blob | null | undefined,
@@ -26,7 +26,7 @@ function useUploadAudio() {
 
     try {
       const response = await axios.post(
-        "/service/upload_audio",
+        "/api/audio/upload",
         formData,
         {
           headers: {
