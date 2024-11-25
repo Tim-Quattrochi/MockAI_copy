@@ -29,4 +29,12 @@ export type Result = {
   score?: number;
 };
 
+export type InterviewData = {
+  name: string;
+  company: string;
+  position: string;
+  questionType: "technical" | "behavioral";
+  recordingType: "audio" | "video";
+};
+
 export type FilterType = "all" | "video" | "voice";
