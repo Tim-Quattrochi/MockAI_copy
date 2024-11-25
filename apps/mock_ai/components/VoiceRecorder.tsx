@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
-import { Feedback } from "@/types";
+import { Feedback, InterviewData } from "@/types";
 import { Button } from "./ui/Button";
 import CircularProgress from "./ui/CircularProgress";
 import { useToast } from "@/hooks/useToast";
@@ -14,6 +14,7 @@ interface VoiceRecorderProps {
   onRecordingComplete: () => void;
   setIsUploading: (isUploading: boolean) => void;
   isUploading: boolean;
+  interviewData: InterviewData;
 }
 
 export default function VoiceRecorder({
@@ -22,6 +23,7 @@ export default function VoiceRecorder({
   onRecordingComplete,
   setIsUploading,
   isUploading,
+  interviewData,
 }: VoiceRecorderProps) {
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
@@ -92,14 +94,20 @@ export default function VoiceRecorder({
   const handleUpload = async (audioBlob: Blob) => {
     setIsUploading(true);
     const formData = new FormData();
-    formData.append("audio", audioBlob);
+    formData.append("file", audioBlob);
+    const fileExtension = audioBlob.type.split("/")[1];
+    formData.append(
+      "fileName",
+      `${Date.now()}-${user.email}.${fileExtension}`
+    );
     formData.append("user", user.email);
     formData.append("question", selectedQuestion);
+    formData.append("name", interviewData.name);
 
     const URL =
       process.env.NODE_ENV === "production"
-        ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/service/upload_audio`
-        : "http://localhost:3001/service/upload_audio";
+        ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/audio/upload`
+        : "http://localhost:3000/api/audio/upload";
 
     try {
       const response = await fetch(URL, {
