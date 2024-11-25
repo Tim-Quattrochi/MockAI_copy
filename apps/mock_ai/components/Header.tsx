@@ -1,10 +1,23 @@
 "use client";
 import Link from "next/link";
 import Image from "next/image";
-import { useUser } from "@auth0/nextjs-auth0/client";
+import { useUser } from "@/hooks/useUser";
+import { useRouter } from "next/navigation";
+import { Button } from "./ui";
+
+import { createClient } from "@/utils/supabase/client";
 
 const Header = () => {
-  const { user } = useUser();
+  const { loading, error, user, role } = useUser();
+
+  const supabase = createClient();
+  const router = useRouter();
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    router.push("/signin");
+    router.refresh();
+  }
 
   return (
     <header className="px-4 lg:px-6  flex items-center">
@@ -40,17 +53,17 @@ const Header = () => {
             >
               Account
             </Link>
-            <a
+            <Button
               className="text-sm font-medium hover:text-[#ff3b9a] transition-colors"
-              href="/api/auth/logout"
+              onClick={handleLogout}
             >
               Logout
-            </a>
+            </Button>
           </>
         ) : (
           <a
             className="text-sm font-medium hover:text-[#ff3b9a] transition-colors"
-            href="/api/auth/login"
+            href="/signin"
           >
             Login
           </a>

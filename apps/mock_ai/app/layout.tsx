@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Inter } from "next/font/google";
-import { UserProvider } from "@auth0/nextjs-auth0/client";
 import { cn } from "@/lib/utils";
 import { Header, Footer } from "@/components/";
 import { Toaster } from "@/components/ui/toaster";
@@ -29,33 +28,31 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <UserProvider>
-        <head>
-          <link
-            rel="icon"
-            href="/icon.jpeg"
-            type="image/jpeg"
-            sizes="32x32"
-          />
-        </head>
+      <head>
+        <link
+          rel="icon"
+          href="/icon.jpeg"
+          type="image/jpeg"
+          sizes="32x32"
+        />
+      </head>
 
-        <body
-          id="main"
-          className={cn(
-            "antialiased",
-            fontHeading.variable,
-            fontBody.variable
-          )}
-        >
-          {" "}
-          <div className="min-h-screen flex flex-col  bg-[#0a0b2e] text-white">
-            <Header />
-            <main className="flex-grow">{children}</main>
-            <Toaster />
-            <Footer />
-          </div>
-        </body>
-      </UserProvider>
+      <body
+        id="main"
+        className={cn(
+          "antialiased",
+          fontHeading.variable,
+          fontBody.variable
+        )}
+      >
+        {" "}
+        <div className="min-h-screen flex flex-col  bg-[#0a0b2e] text-white">
+          <Header />
+          <main className="flex-grow">{children}</main>
+          <Toaster />
+          <Footer />
+        </div>
+      </body>
     </html>
   );
 }

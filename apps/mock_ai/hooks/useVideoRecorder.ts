@@ -1,10 +1,9 @@
 "use client";
-import { upload } from "@vercel/blob/client";
+
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { fetchFile } from "@ffmpeg/util";
-
 import { useRef, useState, useEffect } from "react";
-import { useUser } from "@auth0/nextjs-auth0/client";
+import { useUser } from "./useUser";
 import { v4 as uuid } from "uuid";
 import axios from "axios";
 
@@ -92,9 +91,8 @@ export const useVideoRecorder = (
         console.log("Video URL:", videoUrl);
 
         // Extract audio from video
-        const extractedAudioBlob = await handleAudioExtraction(
-          videoBlob
-        );
+        const extractedAudioBlob =
+          await handleAudioExtraction(videoBlob);
         console.log("Extracted audioBlob:", extractedAudioBlob); // Debugging log
         setAudioBlob(extractedAudioBlob); // Set audio Blob for upload
 
@@ -241,33 +239,30 @@ export const useVideoRecorder = (
     );
 
     const formData = new FormData();
-    formData.append("file", videoBlob, fileNameUnique);
+    formData.append("file", videoBlob);
+    formData.append("filePath", fileNameUnique);
 
     try {
-      console.log("Uploading video to Vercel Blob Store...");
-      // const uploadedResponse = await axios.put(
-      //   baseUrl ? `${baseUrl}/api/video/upload` : `/api/video/upload`,
+      const response = await fetch("/api/video/upload", {
+        method: "POST",
+        body: formData,
+      });
 
-      //   formData,
-      //   {
-      //     headers: { "Content-Type": "multipart/form-data" },
-      //   }
-      // );
-      const uploadedResponse = await upload(
-        fileNameUnique,
-        videoBlob,
-        {
-          access: "public",
-          handleUploadUrl: "/api/video/upload",
-          multipart: true,
-        }
-      );
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.statusText}`);
+      }
 
-      const videoUrl = uploadedResponse.url;
+      const { data } = await response.json();
+
+      console.log("uploaded res:", data);
+
+      const videoUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/videos/${data.path}`;
+
+      console.log("VIDEO URL!: ", videoUrl);
 
       setUploadedVideoUrl(videoUrl);
 
-      if (uploadedResponse.url) {
+      if (videoUrl) {
         const saveResponse = await axios.post(
           baseUrl
             ? `${baseUrl}/service/save_video_url`
@@ -315,9 +310,7 @@ export const useVideoRecorder = (
 
     try {
       const response = await axios.post(
-        baseUrl
-          ? `${baseUrl}/service/upload_audio`
-          : "/service/upload_audio",
+        baseUrl ? `${baseUrl}/api/audio/upload` : "/api/audio/upload",
         formData,
         {
           headers: { "Content-Type": "multipart/form-data" },

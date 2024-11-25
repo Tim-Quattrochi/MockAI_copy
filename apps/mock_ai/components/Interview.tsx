@@ -1,6 +1,6 @@
 "use client";
-import { useUser } from "@auth0/nextjs-auth0/client";
 import { useState, useEffect } from "react";
+import { useUser } from "@/hooks/useUser";
 import axios from "axios";
 import AnalysisCard from "./AnalysisCard";
 import Link from "next/link";
@@ -26,20 +26,14 @@ import {
   CardTitle,
 } from "./ui/card";
 import { Cloud, ArrowRight } from "lucide-react";
+import type { InterviewData } from "@/types";
 
 const Interview = () => {
-  const { user, error, isLoading } = useUser();
+  const { user, error } = useUser();
   const [step, setStep] = useState(1);
   const [selectedQuestion, setSelectedQuestion] = useState<
     string | null
   >(null);
-  const [name, setName] = useState("");
-  const [company, setCompany] = useState("");
-  const [position, setPosition] = useState("");
-  const [questionType, setQuestionType] = useState("technical");
-  const [recordingType, setRecordingType] = useState<
-    "audio" | "video"
-  >("audio");
   const [isQuestionAnswered, setIsQuestionAnswered] = useState(false);
   const [stepVisible, setStepVisible] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
@@ -48,8 +42,8 @@ const Interview = () => {
     null
   );
 
-  const initialData = {
-    name: user?.name || "",
+  const initialData: InterviewData = {
+    name: "",
     company: "",
     position: "",
     questionType: "technical",
@@ -71,21 +65,20 @@ const Interview = () => {
   const fetchQuestion = async () => {
     setIsQuestionFetching(true);
     try {
-      const response = await axios.get(
-        baseUrl
-          ? `${baseUrl}/service/generate_interview_question`
-          : "/service/generate_interview_question",
+      const response = await axios.post(
+        baseUrl ? `${baseUrl}/api/generate` : "/api/generate",
         {
-          params: {
-            name: interviewData.name,
-            company: interviewData.company,
-            position: interviewData.position,
-            interview_type: interviewData.questionType,
-          },
+          name: interviewData.name,
+          company: interviewData.company,
+          position: interviewData.position,
+          interview_type: interviewData.questionType,
+        },
+        {
           headers: { "Content-Type": "application/json" },
         }
       );
-      setSelectedQuestion(response.data);
+
+      setSelectedQuestion(response.data.question.question);
       setIsQuestionFetching(false);
     } catch (error) {
       setIsQuestionFetching(false);
@@ -113,16 +106,6 @@ const Interview = () => {
     }, 500);
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-midnight">
-        <h1 className="text-2xl font-bold text-primary-blue-100">
-          Loading...
-        </h1>
-      </div>
-    );
-  }
-
   if (error) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-midnight">
@@ -145,7 +128,7 @@ const Interview = () => {
         <p className="mt-4 text-lg text-muted-foreground">
           Sorry, but you must be signed in to start your interview.
         </p>
-        <a href="/api/auth/login">
+        <a href="/signin">
           <Button className="mt-10 bg-primary-blue text-primary-blue-100 hover:bg-secondary-orange">
             Sign In to Start Your Interview
           </Button>
@@ -328,6 +311,7 @@ const Interview = () => {
                 <VoiceRecorder
                   selectedQuestion={selectedQuestion}
                   user={user}
+                  interviewData={interviewData}
                   onRecordingComplete={() => {
                     setIsQuestionAnswered(true);
                     setIsUploading(false);

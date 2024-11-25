@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { useUser } from "@auth0/nextjs-auth0/client";
+import { useUser } from "@/hooks/useUser";
 import { Button } from "./ui/Button";
 import { Progress } from "./ui/progress";
 import { useRouter } from "next/navigation";
@@ -23,7 +23,7 @@ import AnalysisCard from "./AnalysisCard";
 import { abort } from "process";
 
 const Results = () => {
-  const { user, isLoading: userLoading } = useUser();
+  const { user } = useUser();
   const [results, setResults] = useState<Result[]>([]);
   const [saveResults, setSaveResults] = useState(false);
   const [analysisLoading, setAnalysisLoading] = useState(false);
@@ -181,7 +181,7 @@ const Results = () => {
             <p className="text-[#f0f0f0] mb-4 text-center">
               Sorry, but you must be signed in to review your results.
             </p>
-            <a href="/api/auth/login">
+            <a href="/signin">
               <Button className="w-full bg-[#7fceff] text-[#050614] hover:bg-[#7fceff]/90">
                 Sign In to Review Your Results
               </Button>
@@ -198,7 +198,7 @@ const Results = () => {
         Your Interview Feedback Powered by mockAI
       </h1>
 
-      {resultsLoading || userLoading ? (
+      {resultsLoading ? (
         <Card className="bg-[#0a0b24] border-[#2e2f61] mb-6">
           <CardContent className="p-4">
             <Skeleton className="h-4 w-full mb-2" />
