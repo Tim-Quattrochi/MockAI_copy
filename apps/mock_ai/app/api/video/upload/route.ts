@@ -1,78 +1,56 @@
-// import { put } from "@vercel/blob";
-
-// export async function PUT(request: Request) {
-//   const form = await request.formData();
-//   const file = form.get("file") as File;
-//   const blob = await put(file.name, file, { access: "public" });
-
-//   return Response.json(blob);
-// }
-
-import {
-  handleUpload,
-  type HandleUploadBody,
-} from "@vercel/blob/client";
 import { NextResponse } from "next/server";
+import { supabase } from "@/lib/supabase";
+
+// export const config = {
+//   api: {
+//     bodyParser: false,
+//   },
+// };
 
 export async function POST(request: Request): Promise<NextResponse> {
-  const body = (await request.json()) as HandleUploadBody;
-
-  async function logAfterPathNAME(pathname: string) {
-    console.log("path name is", pathname);
-  }
-
   try {
-    const jsonResponse = await handleUpload({
-      body,
-      request,
-      onBeforeGenerateToken: async (
-        pathname
-        /* clientPayload */
-      ) => {
-        // Generate a client token for the browser to upload the file
-        // ⚠️ Authenticate and authorize users before generating the token.
-        // Otherwise, you're allowing anonymous uploads.
+    const formData = await request.formData();
+    const file = formData.get("file") as File;
+    const filePath = formData.get("filePath") as string;
 
-        logAfterPathNAME(pathname);
+    if (!file || !filePath) {
+      return NextResponse.json(
+        { error: "File and filePath are required." },
+        { status: 400 }
+      );
+    }
+    console.log("VIDEO FORM DATA: ", formData);
 
-        return {
-          allowedContentTypes: [
-            "image/jpeg",
-            "image/png",
-            "image/gif",
-            "video/mp4",
-            "video/webm",
-            "video/ogg",
-          ],
-          tokenPayload: JSON.stringify({
-            // optional, sent to your server on upload completion
-            // you could pass a user id from auth, or a value from clientPayload
-          }),
-        };
-      },
-      onUploadCompleted: async ({ blob, tokenPayload }) => {
-        // Get notified of client upload completion
-        // ⚠️ This will not work on `localhost` websites,
-        // Use ngrok or similar to get the full upload flow
+    const { data, error } = await supabase.storage
+      .from("videos")
+      .upload(filePath, file, {
+        contentType: file.type,
+      });
 
-        console.log("blob upload completed", blob, tokenPayload);
+    if (error) {
+      console.error("Supabase upload error:", error);
+      return NextResponse.json(
+        { error: "Failed to upload the file." },
+        { status: 500 }
+      );
+    } else {
+      const { data } = supabase.storage
+        .from("videos")
+        .getPublicUrl(filePath);
 
-        try {
-          // Run any logic after the file upload completed
-          // const { userId } = JSON.parse(tokenPayload);
-          // await db.update({ avatar: blob.url, userId });
-          console.log("blob upload completed", blob, tokenPayload);
-        } catch (error) {
-          throw new Error("Could not update user");
-        }
-      },
+      console.log("URL FROM SUPA:", data.publicUrl);
+    }
+
+    return NextResponse.json({
+      message: "File uploaded successfully.",
+      data,
     });
-
-    return NextResponse.json(jsonResponse);
   } catch (error) {
+    console.error("Error in POST /api/upload:", error);
+
     return NextResponse.json(
-      { error: (error as Error).message },
-      { status: 400 } // The webhook will retry 5 times waiting for a 200
+      { error: "An unexpected error occurred." },
+      { status: 500 }
     );
   }
 }
