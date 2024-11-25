@@ -1,15 +1,11 @@
-import {
-  createServerClient,
-  type CookieOptions,
-} from "@supabase/ssr";
-import { type NextRequest, NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
+import { createServerClient } from "@supabase/ssr";
 
-export const createClient = (request: NextRequest) => {
-  // Create an unmodified response
+import { getUserRole } from "@/lib/getUserRole";
+
+export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
+    request,
   });
 
   const supabase = createServerClient(
@@ -35,5 +31,38 @@ export const createClient = (request: NextRequest) => {
     }
   );
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const role = await getUserRole();
+
+  if (
+    user &&
+    role !== "admin" &&
+    request.nextUrl.pathname.startsWith("/admin")
+  ) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/";
+    return NextResponse.redirect(url);
+  }
+
+  if (
+    !user &&
+    !request.nextUrl.pathname.startsWith("/signin") &&
+    !request.nextUrl.pathname.startsWith("/auth")
+  ) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/signin";
+    url.searchParams.set("next", request.nextUrl.pathname);
+    return NextResponse.redirect(url);
+  }
+
+  if (user && request.nextUrl.pathname.startsWith("/signin")) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/";
+    return NextResponse.redirect(url);
+  }
+
   return supabaseResponse;
-};
+}

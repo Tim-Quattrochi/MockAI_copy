@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { useUser } from "@auth0/nextjs-auth0/client";
+import { useUser } from "@/hooks/useUser";
 import Link from "next/link";
 
 // Hooks
@@ -85,7 +85,7 @@ interface InterviewResult {
 }
 
 export default function UserAccount() {
-  const { user, isLoading: userLoading } = useUser();
+  const { user, loading: userLoading } = useUser();
   const [results, setResults] = useState<InterviewResult[]>([]);
   const [filteredResults, setFilteredResults] = useState<
     InterviewResult[]
@@ -303,7 +303,7 @@ export default function UserAccount() {
         </h1>
         <p className="mb-6">Please sign in to view your account.</p>
         <Button asChild>
-          <a href="/api/auth/login">Sign In</a>
+          <a href="/signin">Sign In</a>
         </Button>
       </div>
     );
