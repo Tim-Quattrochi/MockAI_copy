@@ -10,7 +10,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "lintfix": "next lint --fix"
+    "lintfix": "next lint --fix",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@ffmpeg/ffmpeg": "^0.12.10",
