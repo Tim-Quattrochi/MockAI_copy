@@ -1,21 +1,28 @@
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
 }
 
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
+  schemas  = ["public", "auth"] 
 }
 
 model User {
   id        String   @id @default(uuid()) @db.Uuid
   email     String   @unique
   name      String
+  role      String   @default("regular") 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   results   Result[] @relation("UserResults")
+
+  @@schema("public")
 }
+
+
 
 model Question {
   id            String   @id @default(uuid()) @db.Uuid
@@ -28,9 +35,9 @@ model Question {
   updatedAt     DateTime @updatedAt
   results       Result[]
 
+  @@schema("public")
   @@map("Question") 
 }
-
 
 model Result {
   id             String    @id @default(uuid()) @db.Uuid
@@ -51,5 +58,6 @@ model Result {
 
   @@index([userId], map: "idx_user_id")
   @@index([questionId], map: "idx_question_id")
+  @@schema("public")
   @@map("results")
 }

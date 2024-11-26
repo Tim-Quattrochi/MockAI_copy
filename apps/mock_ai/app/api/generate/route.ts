@@ -22,6 +22,13 @@ export async function POST(req: Request) {
       data: { user: authedUser },
     } = await supabase.auth.getUser();
 
+    if (!authedUser) {
+      return NextResponse.json(
+        { error: "User is not authenticated." },
+        { status: 401 }
+      );
+    }
+
     const gemini = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
     const model = gemini.getGenerativeModel({ model: "gemini-pro" });
@@ -60,6 +67,26 @@ export async function POST(req: Request) {
       position,
       interviewType: interview_type,
     });
+
+    if (!savedQuestion) {
+      return NextResponse.json(
+        { error: "An error occurred while saving the question." },
+        { status: 500 }
+      );
+    }
+
+    console.log(authedUser);
+
+    const existingUser = await prisma.user.findUnique({
+      where: { id: authedUser.id },
+    });
+
+    if (!existingUser) {
+      return NextResponse.json(
+        { error: "User not found." },
+        { status: 404 }
+      );
+    }
 
     const createResult = await prisma.result.create({
       data: {
