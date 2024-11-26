@@ -4,12 +4,6 @@ import path from "path";
 import fs from "fs/promises";
 import { access } from "fs/promises";
 
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
-
 export async function POST(
   request: NextRequest
 ): Promise<NextResponse> {
