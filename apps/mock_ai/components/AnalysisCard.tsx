@@ -11,7 +11,7 @@ import { useState } from "react";
 
 interface QuestionProps {
   title: string;
-  content: string;
+  content: string | string[];
   type: "question";
   isLoading?: boolean;
   handleRetry?: () => Promise<void>;
@@ -42,7 +42,11 @@ const AnalysisCard = ({
   const isQuestion = type === "question";
 
   return (
-    <Card className={"bg-[#0a0b24] border-[#2e2f61] mb-4 rounded-lg shadow-lg transition-transform hover:scale-102 max-w-2xl mx-auto"}>
+    <Card
+      className={
+        "bg-[#0a0b24] border-[#2e2f61] mb-4 rounded-lg shadow-lg transition-transform hover:scale-102 max-w-2xl mx-auto"
+      }
+    >
       <CardHeader className="pb-2">
         <CardTitle className="text-[#7fceff] text-2xl font-semibold flex justify-between items-center mx-auto text-center">
           {title}
@@ -65,7 +69,17 @@ const AnalysisCard = ({
           <div className="transition-opacity duration-500 opacity-100">
             {isQuestion ? (
               <p className="text-[#f0f0f0] text-lg leading-relaxed">
-                {content}
+                {Array.isArray(content) ? (
+                  content.map((data, index) => (
+                    <p key={index} className="text-[#f0f0f0] mb-4">
+                      {typeof data === "string"
+                        ? data
+                        : (data as { question: string }).question}
+                    </p>
+                  ))
+                ) : (
+                  <p className="text-[#f0f0f0] mb-4">{content}</p>
+                )}
               </p>
             ) : hasError ? (
               <div className="text-center">

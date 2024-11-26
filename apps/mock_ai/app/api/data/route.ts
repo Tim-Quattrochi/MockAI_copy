@@ -1,9 +1,9 @@
-import { prisma } from "@/lib/prisma";
+import { getQuestions } from "@/lib/database/questions";
 import { NextResponse } from "next/server";
 
 export async function GET() {
   try {
-    const questions = await prisma.question.findMany();
+    const questions = await getQuestions();
 
     return NextResponse.json(questions);
   } catch (error: unknown) {

@@ -66,7 +66,7 @@ const Interview = () => {
     setIsQuestionFetching(true);
     try {
       const response = await axios.post(
-        baseUrl ? `${baseUrl}/api/generate` : "/api/generate",
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/generate`,
         {
           name: interviewData.name,
           company: interviewData.company,
@@ -78,7 +78,7 @@ const Interview = () => {
         }
       );
 
-      setSelectedQuestion(response.data.question.question);
+      setSelectedQuestion(response.data.question);
       setIsQuestionFetching(false);
     } catch (error) {
       setIsQuestionFetching(false);
@@ -115,24 +115,6 @@ const Interview = () => {
         <p className="mt-4 text-lg text-muted-foreground">
           Sorry, but there was an error loading the page.
         </p>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-midnight mx-auto">
-        <h1 className="text-2xl  font-bold text-titleColor">
-          Interview Meeting Room
-        </h1>
-        <p className="mt-4 text-lg text-muted-foreground">
-          Sorry, but you must be signed in to start your interview.
-        </p>
-        <a href="/signin">
-          <Button className="mt-10 bg-primary-blue text-primary-blue-100 hover:bg-secondary-orange">
-            Sign In to Start Your Interview
-          </Button>
-        </a>
       </div>
     );
   }

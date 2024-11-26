@@ -1,7 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { saveQuestion } from "@/lib/database/questions";
+
 import { createClient } from "@/utils/supabase/server";
 
 export async function POST(req: Request) {
@@ -20,9 +19,10 @@ export async function POST(req: Request) {
 
     const {
       data: { user: authedUser },
+      error: authError,
     } = await supabase.auth.getUser();
 
-    if (!authedUser) {
+    if (authError || !authedUser) {
       return NextResponse.json(
         { error: "User is not authenticated." },
         { status: 401 }
@@ -30,13 +30,10 @@ export async function POST(req: Request) {
     }
 
     const gemini = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
     const model = gemini.getGenerativeModel({ model: "gemini-pro" });
 
     const data = await req.json();
     const { name, company, position, interview_type } = data;
-
-    console.log("NAME FROM GENERATE!!: ,", name);
 
     if (!name || !company || !position || !interview_type) {
       return NextResponse.json(
@@ -57,16 +54,21 @@ export async function POST(req: Request) {
     }
 
     const result = await model.generateContent(prompt);
+    const output = await result.response.text();
 
-    const output = result.response.text();
+    const { data: savedQuestion, error } = await supabase
+      .from("Question")
+      .insert({
+        question: output,
+        name: data.name,
+        company: data.company,
+        position: data.position,
+        interview_type: data.interview_type,
+      })
+      .select();
 
-    const savedQuestion = await saveQuestion({
-      question: output,
-      name,
-      company,
-      position,
-      interviewType: interview_type,
-    });
+    console.log("Saved question:", savedQuestion);
+    console.log("Error:", error);
 
     if (!savedQuestion) {
       return NextResponse.json(
@@ -75,32 +77,44 @@ export async function POST(req: Request) {
       );
     }
 
-    console.log(authedUser);
+    const { data: existingUser, error: userError } = await supabase
+      .from("users")
+      .select("*")
+      .eq("id", authedUser.id)
+      .single();
 
-    const existingUser = await prisma.user.findUnique({
-      where: { id: authedUser.id },
-    });
-
-    if (!existingUser) {
+    if (userError && userError.code !== "PGRST116") {
       return NextResponse.json(
         { error: "User not found." },
         { status: 404 }
       );
     }
 
-    const createResult = await prisma.result.create({
-      data: {
-        questionId: savedQuestion.id,
-        userId: authedUser?.id || "",
-        transcript: "",
-        fillerWords: {},
-        longPauses: {},
-        pauseDurations: "",
-        aiFeedback: "",
-        audioUrl: "",
-        videoUrl: "",
-      },
-    });
+    const { data: resultData, error: resultError } = await supabase
+      .from("results")
+      .insert([
+        {
+          question_id: savedQuestion[0].id,
+          user_id: authedUser.id,
+          score: 0.0,
+          transcript: "",
+          filler_words: {},
+          long_pauses: {},
+          pause_durations: "",
+          ai_feedback: "",
+          audio_url: "",
+          video_url: "",
+        },
+      ])
+      .single();
+
+    if (resultError) {
+      console.log("Error saving result:", resultError);
+      return NextResponse.json(
+        { error: "An error occurred while creating the result." },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({ question: savedQuestion });
   } catch (error) {
