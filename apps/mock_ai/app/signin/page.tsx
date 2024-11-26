@@ -14,9 +14,10 @@ import {
   CardFooter,
 } from "@/components/ui/card";
 
-export default function SignInPage() {
+function SignInForm() {
   const [isGoogleLoading, setIsGoogleLoading] =
     useState<boolean>(false);
+
   const supabase = createClient();
 
   const searchParams = useSearchParams();
@@ -49,36 +50,42 @@ export default function SignInPage() {
   }
 
   return (
+    <Card className="flex flex-col items-center justify-center h-screen">
+      <CardHeader>
+        <CardTitle>Sign In</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={signInWithGoogle}
+          disabled={isGoogleLoading}
+        >
+          {isGoogleLoading ? (
+            <Icons.loaderCircle className="mr-2 size-4 animate-spin" />
+          ) : (
+            <Icons.google className="mr-2 size-6" />
+          )}{" "}
+          <CardDescription>Sign in with Google</CardDescription>
+        </Button>
+      </CardContent>
+      <CardFooter>
+        <CardDescription>
+          Sign in to access your account
+        </CardDescription>
+      </CardFooter>
+    </Card>
+  );
+}
+
+export default function SignInPage() {
+  return (
     <Suspense
       fallback={
         <Icons.loaderCircle className="mr-2 size-4 animate-spin" />
       }
     >
-      <Card className="flex flex-col items-center justify-center h-screen">
-        <CardHeader>
-          <CardTitle>Sign In</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={signInWithGoogle}
-            disabled={isGoogleLoading}
-          >
-            {isGoogleLoading ? (
-              <Icons.loaderCircle className="mr-2 size-4 animate-spin" />
-            ) : (
-              <Icons.google className="mr-2 size-6" />
-            )}{" "}
-            <CardDescription>Sign in with Google</CardDescription>
-          </Button>
-        </CardContent>
-        <CardFooter>
-          <CardDescription>
-            Sign in to access your account
-          </CardDescription>
-        </CardFooter>
-      </Card>
+      <SignInForm />
     </Suspense>
   );
 }
