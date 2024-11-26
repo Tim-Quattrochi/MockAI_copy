@@ -104,11 +104,7 @@ export default function VoiceRecorder({
     formData.append("question", selectedQuestion);
     formData.append("name", interviewData.name);
 
-    const URL =
-      process.env.NODE_ENV === "production"
-        ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/audio/upload`
-        : "http://localhost:3000/api/audio/upload";
-
+    const URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/audio/upload`;
     try {
       const response = await fetch(URL, {
         method: "POST",
