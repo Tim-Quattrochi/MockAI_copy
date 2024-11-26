@@ -1,12 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
-import { Button } from "@/components/ui";
-
+import { Button, CardHeader } from "@/components/ui";
+import { Card } from "@/components/ui";
 import { Icons } from "@/components/ui/icons";
 import { toast } from "@/hooks/useToast";
+import {
+  CardContent,
+  CardDescription,
+  CardTitle,
+  CardFooter,
+} from "@/components/ui/card";
 
 export default function SignInPage() {
   const [isGoogleLoading, setIsGoogleLoading] =
@@ -43,18 +49,36 @@ export default function SignInPage() {
   }
 
   return (
-    <Button
-      type="button"
-      variant="outline"
-      onClick={signInWithGoogle}
-      disabled={isGoogleLoading}
-    >
-      {isGoogleLoading ? (
+    <Suspense
+      fallback={
         <Icons.loaderCircle className="mr-2 size-4 animate-spin" />
-      ) : (
-        <Icons.google className="mr-2 size-6" />
-      )}{" "}
-      Sign in with Google
-    </Button>
+      }
+    >
+      <Card className="flex flex-col items-center justify-center h-screen">
+        <CardHeader>
+          <CardTitle>Sign In</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={signInWithGoogle}
+            disabled={isGoogleLoading}
+          >
+            {isGoogleLoading ? (
+              <Icons.loaderCircle className="mr-2 size-4 animate-spin" />
+            ) : (
+              <Icons.google className="mr-2 size-6" />
+            )}{" "}
+            <CardDescription>Sign in with Google</CardDescription>
+          </Button>
+        </CardContent>
+        <CardFooter>
+          <CardDescription>
+            Sign in to access your account
+          </CardDescription>
+        </CardFooter>
+      </Card>
+    </Suspense>
   );
 }
