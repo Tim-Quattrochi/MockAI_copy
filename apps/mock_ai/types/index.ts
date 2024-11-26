@@ -13,6 +13,12 @@ export type Feedback = {
 export type Question = {
   id: number;
   question: string;
+  name: string;
+  company: string;
+  position: string;
+  interviewType: "technical" | "behavioral";
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type Result = {
