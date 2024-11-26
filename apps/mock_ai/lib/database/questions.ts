@@ -1,29 +1,45 @@
-import { prisma } from "@/lib/prisma";
+import { Question } from "@/types";
+import { createClient } from "@/utils/supabase/server";
 
-export async function saveQuestion({
-  question,
-  name,
-  company,
-  position,
-  interviewType,
-}: {
+const supabasePromise = createClient();
+
+export async function saveQuestion(data: {
   question: string;
   name: string;
   company: string;
   position: string;
   interviewType: string;
-}) {
-  return await prisma.question.create({
-    data: {
-      question,
-      name,
-      company,
-      position,
-      interviewType,
-    },
-  });
+}): Promise<Question> {
+  const supabase = await supabasePromise;
+  const { data: savedQuestion, error } = await supabase
+    .from("Question")
+    .insert([
+      {
+        question: data.question,
+        name: data.name,
+        company: data.company,
+        position: data.position,
+        interviewType: data.interviewType,
+      },
+    ])
+    .single();
+
+  if (error) {
+    throw new Error(`Error saving question: ${error.message}`);
+  }
+
+  return savedQuestion;
 }
 
 export async function getQuestions() {
-  return await prisma.question.findMany();
+  const supabase = await supabasePromise;
+  const { data: questions, error } = await supabase
+    .from("Question")
+    .select("*");
+
+  if (error) {
+    throw new Error(`Error fetching questions: ${error.message}`);
+  }
+
+  return questions;
 }
