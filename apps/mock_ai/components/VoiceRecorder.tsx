@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
-import { Feedback, InterviewData } from "@/types";
+import { Feedback, InterviewData, Question } from "@/types";
 import { Button } from "./ui/Button";
 import CircularProgress from "./ui/CircularProgress";
 import { useToast } from "@/hooks/useToast";
@@ -9,7 +9,8 @@ import { useToast } from "@/hooks/useToast";
 import { CloudIcon, MicIcon, OctagonX } from "lucide-react";
 
 interface VoiceRecorderProps {
-  selectedQuestion: string;
+  questionId: string;
+  selectedQuestion: Question["question"];
   user: any;
   onRecordingComplete: () => void;
   setIsUploading: (isUploading: boolean) => void;
@@ -18,6 +19,7 @@ interface VoiceRecorderProps {
 }
 
 export default function VoiceRecorder({
+  questionId,
   selectedQuestion,
   user,
   onRecordingComplete,
@@ -101,8 +103,12 @@ export default function VoiceRecorder({
       `${Date.now()}-${user.email}.${fileExtension}`
     );
     formData.append("user", user.email);
-    formData.append("question", selectedQuestion);
+    formData.append("questionId", questionId);
+    formData.append("question", JSON.stringify(selectedQuestion));
     formData.append("name", interviewData.name);
+    formData.append("company", interviewData.company);
+    formData.append("position", interviewData.position);
+    formData.append("questionType", interviewData.questionType);
 
     const URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/audio/upload`;
     try {

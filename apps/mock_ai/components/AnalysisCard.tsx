@@ -3,15 +3,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Skeleton } from "./ui/skeleton";
 import { Loader2 } from "lucide-react";
-import { Result } from "@/types";
+import { Question, Result } from "@/types";
 import { Button } from "./ui/Button";
-import { useState } from "react";
 
 // This component is used to render the question or analysis from the AI.
 
 interface QuestionProps {
   title: string;
-  content: string | string[];
+  content: Question["question"];
   type: "question";
   isLoading?: boolean;
   handleRetry?: () => Promise<void>;
@@ -69,17 +68,7 @@ const AnalysisCard = ({
           <div className="transition-opacity duration-500 opacity-100">
             {isQuestion ? (
               <p className="text-[#f0f0f0] text-lg leading-relaxed">
-                {Array.isArray(content) ? (
-                  content.map((data, index) => (
-                    <p key={index} className="text-[#f0f0f0] mb-4">
-                      {typeof data === "string"
-                        ? data
-                        : (data as { question: string }).question}
-                    </p>
-                  ))
-                ) : (
-                  <p className="text-[#f0f0f0] mb-4">{content}</p>
-                )}
+                {content}
               </p>
             ) : hasError ? (
               <div className="text-center">

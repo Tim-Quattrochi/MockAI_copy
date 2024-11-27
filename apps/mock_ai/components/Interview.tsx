@@ -26,14 +26,17 @@ import {
   CardTitle,
 } from "./ui/card";
 import { Cloud, ArrowRight } from "lucide-react";
-import type { InterviewData } from "@/types";
+import type {
+  InterviewData,
+  Question,
+  QuestionResponse,
+} from "@/types";
 
 const Interview = () => {
   const { user, error } = useUser();
   const [step, setStep] = useState(1);
-  const [selectedQuestion, setSelectedQuestion] = useState<
-    string | null
-  >(null);
+  const [selectedQuestion, setSelectedQuestion] =
+    useState<Question | null>(null);
   const [isQuestionAnswered, setIsQuestionAnswered] = useState(false);
   const [stepVisible, setStepVisible] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
@@ -65,7 +68,7 @@ const Interview = () => {
   const fetchQuestion = async () => {
     setIsQuestionFetching(true);
     try {
-      const response = await axios.post(
+      const response = await axios.post<QuestionResponse>(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/generate`,
         {
           name: interviewData.name,
@@ -118,6 +121,8 @@ const Interview = () => {
       </div>
     );
   }
+
+  console.log("question from interview", selectedQuestion);
 
   return (
     <div className="hero flex min-h-screen flex-col items-center justify-center  p-4">
@@ -284,14 +289,15 @@ const Interview = () => {
               }`}
             >
               <AnalysisCard
-                content={[selectedQuestion]}
+                content={selectedQuestion.question}
                 title="Interview Question Provided by mockAI"
                 type="question"
                 isLoading={isQuestionFetching}
               />
               {interviewData.recordingType === "audio" ? (
                 <VoiceRecorder
-                  selectedQuestion={selectedQuestion}
+                  questionId={selectedQuestion.id}
+                  selectedQuestion={selectedQuestion.question}
                   user={user}
                   interviewData={interviewData}
                   onRecordingComplete={() => {

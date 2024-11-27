@@ -25,7 +25,7 @@ export async function POST(
     const file = formData.get("file") as File;
 
     const fileName = formData.get("fileName") as string;
-
+    const questionId = formData.get("questionId") as string;
     const user = formData.get("user") as string;
     const question = formData.get("question") as string;
     const name = formData.get("name") as string;
@@ -43,7 +43,7 @@ export async function POST(
     const uniqueFilePath = `${authedUser.id}/${uniqueFileName}`;
 
     const { data, error } = await supabase.storage
-      .from("audio")
+      .from("audio-interviews")
       .upload(filePath, file, {
         contentType: file.type,
         upsert: false,
@@ -62,7 +62,7 @@ export async function POST(
 
     const { data: signedUrlData, error: signedUrlError } =
       await supabase.storage
-        .from("audio")
+        .from("audio-interviews")
         .createSignedUrl(filePath, 120 * 120, { download: true });
 
     if (signedUrlError) {
@@ -78,8 +78,6 @@ export async function POST(
 
     const signedUrl = signedUrlData?.signedUrl;
 
-    console.log("SIGNED URL: ", signedUrl);
-
     if (!signedUrl) {
       return NextResponse.json(
         { error: "Failed to retrieve the signed URL." },
@@ -88,6 +86,7 @@ export async function POST(
     }
 
     const response = await fetch(signedUrl);
+
     const arrayBuffer = await response.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
@@ -111,19 +110,34 @@ export async function POST(
         },
         body: JSON.stringify({
           videoFilePath: tmpFilePath,
+          user: authedUser,
+          questionId: questionId,
+          question: question,
         }),
       }
     );
 
     const transcriptionData = await transcriptionResponse.json();
 
+    console.log("TRANS RES FROM UPLOAD", transcriptionData);
+
     const { data: questionData, error: questionError } =
       await supabase
         .from("question")
         .select("id")
-        .eq("question", question)
-        .eq("userId", authedUser.id)
+        .eq("id", questionId)
         .single();
+
+    if (questionError) {
+      console.error("Error fetching question:", questionError);
+      return NextResponse.json(
+        {
+          error: "Failed to fetch question.",
+          details: questionError.message,
+        },
+        { status: 500 }
+      );
+    }
 
     if (!questionData) {
       return NextResponse.json(
@@ -133,6 +147,10 @@ export async function POST(
     }
 
     if (transcriptionResponse.status !== 200) {
+      console.error(
+        "Failed to transcribe audio:",
+        transcriptionData.error
+      );
       return NextResponse.json(
         {
           error:
@@ -142,34 +160,13 @@ export async function POST(
       );
     }
 
-    const questionId = questionData.id;
-
-    const { data: userRecord, error: userError } = await supabase
-      .from("User")
-      .select("*")
-      .eq("id", authedUser.id)
-      .single();
-
-    if (!userRecord) {
-      return NextResponse.json(
-        { error: "User not found." },
-        { status: 404 }
-      );
-    }
-
     const { data: resultData, error: resultError } = await supabase
       .from("results")
       .insert([
         {
-          questionId: questionId,
-          userId: authedUser.id,
-          transcript: transcriptionData.transcription.transcript,
-          fillerWords:
-            transcriptionData.transcription.fillerWordCount,
-          longPauses: transcriptionData.transcription.longPauses,
-          pauseDurations:
-            transcriptionData.transcription.longPauses.join(", "),
-          audioUrl: signedUrl,
+          question_id: questionData.id,
+          user_id: authedUser.id,
+          audio_url: signedUrl,
         },
       ]);
 
@@ -182,6 +179,12 @@ export async function POST(
     console.error("Error in POST /api/audio/upload:", error);
 
     if (error instanceof Error) {
+      console.log(
+        "error in instance of error",
+        error.message,
+        error.stack,
+        error.name
+      );
       return NextResponse.json(
         {
           error: "An unexpected error occurred.",

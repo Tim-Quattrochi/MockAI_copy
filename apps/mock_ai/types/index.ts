@@ -11,14 +11,26 @@ export type Feedback = {
 };
 
 export type Question = {
-  id: number;
+  id: string;
   question: string;
   name: string;
   company: string;
   position: string;
-  interviewType: "technical" | "behavioral";
-  createdAt: string;
-  updatedAt: string;
+  interview_type: "technical" | "behavioral";
+  createdAt?: string;
+  updatedAt?: string;
+};
+export type QuestionResponse = {
+  question: {
+    id: string;
+    question: string;
+    name: string;
+    company: string;
+    position: string;
+    interview_type: "technical" | "behavioral";
+    createdAt: string;
+    updatedAt: string;
+  };
 };
 
 export type Result = {

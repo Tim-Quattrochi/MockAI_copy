@@ -22,13 +22,6 @@ export async function POST(req: Request) {
       error: authError,
     } = await supabase.auth.getUser();
 
-    if (authError || !authedUser) {
-      return NextResponse.json(
-        { error: "User is not authenticated." },
-        { status: 401 }
-      );
-    }
-
     const gemini = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     const model = gemini.getGenerativeModel({ model: "gemini-pro" });
 
@@ -56,54 +49,38 @@ export async function POST(req: Request) {
     const result = await model.generateContent(prompt);
     const output = await result.response.text();
 
-    const { data: savedQuestion, error } = await supabase
-      .from("Question")
-      .insert({
-        question: output,
-        name: data.name,
-        company: data.company,
-        position: data.position,
-        interview_type: data.interview_type,
-      })
-      .select();
+    const { data: question, error: errorWhileSavingQuestion } =
+      await supabase
+        .from("question")
+        .insert([
+          {
+            question: output,
+            name: data.name,
+            company: data.company,
+            position: data.position,
+            interview_type: data.interview_type,
+          },
+        ])
+        .select()
+        .single();
 
-    console.log("Saved question:", savedQuestion);
-    console.log("Error:", error);
-
-    if (!savedQuestion) {
+    if (!question || errorWhileSavingQuestion) {
       return NextResponse.json(
         { error: "An error occurred while saving the question." },
         { status: 500 }
       );
     }
 
-    const { data: existingUser, error: userError } = await supabase
-      .from("users")
-      .select("*")
-      .eq("id", authedUser.id)
-      .single();
-
-    if (userError && userError.code !== "PGRST116") {
-      return NextResponse.json(
-        { error: "User not found." },
-        { status: 404 }
-      );
-    }
-
+    // I insert the question_id to relate the result to the question
+    // and the user_id to relate the result to the user.
+    // So I can query for the result after genai to update with the
+    // other values.
     const { data: resultData, error: resultError } = await supabase
       .from("results")
       .insert([
         {
-          question_id: savedQuestion[0].id,
-          user_id: authedUser.id,
-          score: 0.0,
-          transcript: "",
-          filler_words: {},
-          long_pauses: {},
-          pause_durations: "",
-          ai_feedback: "",
-          audio_url: "",
-          video_url: "",
+          question_id: question.id,
+          user_id: authedUser?.id,
         },
       ])
       .single();
@@ -116,7 +93,7 @@ export async function POST(req: Request) {
       );
     }
 
-    return NextResponse.json({ question: savedQuestion });
+    return NextResponse.json({ question });
   } catch (error) {
     console.error("Error in POST /api/generate:", error);
 
