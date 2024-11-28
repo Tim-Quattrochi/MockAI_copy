@@ -3,18 +3,20 @@ import Link from "next/link";
 import Image from "next/image";
 import { useUser } from "@/hooks/useUser";
 import { useRouter } from "next/navigation";
+import NavItem from "@/components/NavItem";
 import { Button } from "./ui";
 
 import { createClient } from "@/utils/supabase/client";
 
 const Header = () => {
-  const { loading, error, user, role } = useUser();
+  const { loading, error, user, role, revalidate } = useUser();
 
   const supabase = createClient();
   const router = useRouter();
 
   async function handleLogout() {
     await supabase.auth.signOut();
+    revalidate();
     router.push("/signin");
     router.refresh();
   }
@@ -53,20 +55,21 @@ const Header = () => {
             >
               Account
             </Link>
-            <Button
-              className="text-sm font-medium hover:text-[#ff3b9a] transition-colors"
-              onClick={handleLogout}
+            <Link
+              className="text-sm font-medium hover:text-[#ff3b9a] transition-colors cursor-pointer"
+              onClick={() => handleLogout()}
+              href="/"
             >
               Logout
-            </Button>
+            </Link>
           </>
         ) : (
-          <a
+          <Link
             className="text-sm font-medium hover:text-[#ff3b9a] transition-colors"
             href="/signin"
           >
             Login
-          </a>
+          </Link>
         )}
       </nav>
     </header>

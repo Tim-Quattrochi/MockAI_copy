@@ -23,7 +23,31 @@ export const getResultByQuestionId = async (
     interview_date: new Date(result.interview_date).toLocaleString(),
   };
 
-  console.log("Serialized result:", serializedResult);
-
   return serializedResult;
+};
+
+export const getAllResults = async (
+  uid: string
+): Promise<Result[]> => {
+  const { data: results, error } = await supabase
+    .from("results")
+    .select("*")
+    .eq("user_id", uid)
+    .order("interview_date", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching results:", error);
+    return [];
+  }
+
+  const serializedResults = results.map((result) => ({
+    ...result,
+    filler_words: JSON.parse(result.filler_words),
+    long_pauses: JSON.parse(result.long_pauses),
+    interview_date: new Date(result.interview_date).toLocaleString(),
+  }));
+
+  console.log("Serialized results:", serializedResults);
+
+  return serializedResults;
 };

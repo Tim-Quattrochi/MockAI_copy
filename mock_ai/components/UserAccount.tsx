@@ -2,11 +2,13 @@
 
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { useUser } from "@/hooks/useUser";
 import Link from "next/link";
+import { handleGetallResults } from "@/app/user_account/actions";
+import { handleLogout } from "@/utils/supabase/helpers";
 
 // Hooks
 import { useToast } from "@/hooks/useToast";
+import { useUser } from "@/hooks/useUser";
 
 // UI components
 import {
@@ -66,18 +68,25 @@ import { formatPauseDurations } from "@/lib/formatSeconds";
 //types
 import { FilterType } from "@/types";
 
-interface FillerWords {
-  [key: string]: number;
+interface FillerWord {
+  word: string;
+  count: number;
+}
+
+interface Pause {
+  duration: number;
+  start: number;
+  end: number;
 }
 
 interface InterviewResult {
-  id: number;
+  id: string;
   question: string;
   score: number;
   transcript: string;
-  filler_words: string;
-  long_pauses: number;
-  pause_durations: number | number[];
+  filler_words: FillerWord[] | [];
+  long_pauses: Pause[] | [];
+  pause_durations: string;
   ai_feedback: string;
   interview_date: string;
   video_url: string | null;
@@ -85,7 +94,13 @@ interface InterviewResult {
 }
 
 export default function UserAccount() {
-  const { user, loading: userLoading } = useUser();
+  const {
+    user,
+    loading: userLoading,
+    error: userError,
+    revalidate,
+  } = useUser();
+
   const [results, setResults] = useState<InterviewResult[]>([]);
   const [filteredResults, setFilteredResults] = useState<
     InterviewResult[]
@@ -103,7 +118,25 @@ export default function UserAccount() {
   const [currentPage, setCurrentPage] = useState(1);
   const resultsPerPage = 5;
 
+  const userPicture = user?.user_metadata?.avatar_url || null;
+  const uname =
+    user?.user_metadata?.full_name ||
+    user?.user_metadata.name ||
+    "User";
+  const userEmail = user?.email || "";
+
   const { toast, dismiss } = useToast();
+
+  async function userInterviewHistory() {
+    let results = [];
+    if (user?.id && !userLoading) {
+      results = await handleGetallResults(user?.id);
+    }
+
+    return results;
+  }
+
+  const fullUserHistory = userInterviewHistory();
 
   const paginatedResults = filteredResults.slice(
     (currentPage - 1) * resultsPerPage,
@@ -209,29 +242,12 @@ export default function UserAccount() {
   };
 
   useEffect(() => {
-    if (user?.email) {
-      axios
-        .get("/service/get_all_results", {
-          params: { user: user.email },
-          headers: { "Content-Type": "application/json" },
-        })
-        .then((response) => {
-          const fetchedResults = Array.isArray(response.data)
-            ? response.data
-            : [];
-          const sortedResults = fetchedResults.sort((a, b) => {
-            return (
-              new Date(b.interview_date).getTime() -
-              new Date(a.interview_date).getTime()
-            );
-          });
-          setResults(sortedResults);
-          setFilteredResults(sortedResults);
-        })
-        .catch((error) => {
-          console.error("Error fetching results:", error);
-        })
-        .finally(() => setLoading(false));
+    if (user?.id && !userLoading) {
+      fullUserHistory.then((results) => {
+        setResults(results);
+        setFilteredResults(results);
+        setLoading(false);
+      });
     }
   }, [user]);
 
@@ -241,7 +257,33 @@ export default function UserAccount() {
       if (filter === "video") return result.video_url !== null;
       if (filter === "voice")
         return result.audio_url !== null && result.video_url === null;
-      return true;
+      if (filter === "behavioral")
+        return result.interview_type === "behavioral";
+      if (filter === "technical")
+        return result.interview_type === "technical";
+      if (filter === "behavioral-video")
+        return (
+          result.interview_type === "behavioral" &&
+          result.video_url !== null
+        );
+      if (filter === "behavioral-voice")
+        return (
+          result.interview_type === "behavioral" &&
+          result.audio_url !== null &&
+          result.video_url === null
+        );
+      if (filter === "technical-video")
+        return (
+          result.interview_type === "technical" &&
+          result.video_url !== null
+        );
+      if (filter === "technical-voice")
+        return (
+          result.interview_type === "technical" &&
+          result.audio_url !== null &&
+          result.video_url === null
+        );
+      return false;
     });
     setFilteredResults(filtered);
   }, [filter, results]);
@@ -256,6 +298,18 @@ export default function UserAccount() {
     setFilteredResults(sortedResults);
   };
 
+  const handleSortByType = (type: string) => {
+    const sortedResults = [...filteredResults].sort((a, b) => {
+      if (type === "technical") {
+        return a.interview_type ? -1 : 1;
+      } else if (type === "behavioral") {
+        return a.interview_type ? 1 : -1;
+      }
+      return 0;
+    });
+    setFilteredResults(sortedResults);
+  };
+
   const handleDelete = () => {
     if (!selectedResultId) return;
 
@@ -265,10 +319,10 @@ export default function UserAccount() {
       })
       .then(() => {
         setResults((prevResults) =>
-          prevResults.filter((r) => r.id !== selectedResultId)
+          prevResults.filter((r) => Number(r.id) !== selectedResultId)
         );
         setFilteredResults((prevResults) =>
-          prevResults.filter((r) => r.id !== selectedResultId)
+          prevResults.filter((r) => Number(r.id) !== selectedResultId)
         );
         showToast("Success", "Interview Deleted", "success");
       })
@@ -295,36 +349,26 @@ export default function UserAccount() {
     );
   }
 
-  if (!user) {
-    return (
-      <div className="flex flex-col items-center justify-center h-screen bg-slate-950 text-slate-50">
-        <h1 className="text-3xl font-bold mb-4">
-          mockAI User Account
-        </h1>
-        <p className="mb-6">Please sign in to view your account.</p>
-        <Button asChild>
-          <a href="/signin">Sign In</a>
-        </Button>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50 p-4 md:p-8">
       <div className="max-w-4xl mx-auto space-y-8">
         <div className="flex items-center space-x-4">
           <Avatar className="w-16 h-16">
             <AvatarImage
-              src={user.picture || undefined}
-              alt={user.name || "User"}
+              src={userPicture}
+              alt={
+                uname
+                  ? `${uname}'s profile picture`
+                  : "User's profile picture"
+              }
             />
             <AvatarFallback>
-              {user.name ? user.name[0].toUpperCase() : "U"}
+              {uname.charAt(0).toUpperCase() || "U"}
             </AvatarFallback>
           </Avatar>
           <div>
-            <h2 className="text-2xl font-bold">{user.name}</h2>
-            <p className="text-slate-400">{user.email}</p>
+            <h2 className="text-2xl font-bold">{uname}</h2>
+            <p className="text-slate-400">{userEmail}</p>
           </div>
         </div>
 
@@ -354,26 +398,61 @@ export default function UserAccount() {
                 </SelectContent>
               </Select>
             </div>
-            <RadioGroup
-              defaultValue="all"
-              className="flex space-x-4"
-              onValueChange={(value) =>
-                setFilter(value as FilterType)
-              }
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="all" id="all" />
-                <Label htmlFor="all">All</Label>
+            <div className="flex flex-col space-y-4 sm:flex-row sm:space-y-0 sm:space-x-8">
+              <div>
+                <h3 className="text-lg font-semibold mb-2">
+                  Filter by Media Type
+                </h3>
+                <RadioGroup
+                  defaultValue="all"
+                  className="flex flex-wrap space-x-4"
+                  onValueChange={(value) =>
+                    setFilter(value as FilterType)
+                  }
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="all" id="all" />
+                    <Label htmlFor="all">All</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="video" id="video" />
+                    <Label htmlFor="video">Video</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="voice" id="voice" />
+                    <Label htmlFor="voice">Voice</Label>
+                  </div>
+                </RadioGroup>
               </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="video" id="video" />
-                <Label htmlFor="video">Video</Label>
+
+              <div>
+                <h3 className="text-lg font-semibold mb-2">
+                  Filter by Interview Type
+                </h3>
+                <RadioGroup
+                  defaultValue="all"
+                  className="flex flex-wrap space-x-4"
+                  onValueChange={(value) =>
+                    setFilter(value as FilterType)
+                  }
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem
+                      value="behavioral"
+                      id="behavioral"
+                    />
+                    <Label htmlFor="behavioral">Behavioral</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem
+                      value="technical"
+                      id="technical"
+                    />
+                    <Label htmlFor="technical">Technical</Label>
+                  </div>
+                </RadioGroup>
               </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="voice" id="voice" />
-                <Label htmlFor="voice">Voice</Label>
-              </div>
-            </RadioGroup>
+            </div>
           </div>
 
           {loading ? (
@@ -384,9 +463,27 @@ export default function UserAccount() {
           ) : filteredResults.length > 0 ? (
             <div>
               {paginatedResults.map((result) => {
-                const fillerWords: FillerWords = JSON.parse(
-                  result.filler_words
-                );
+                {
+                  result.filler_words?.length > 0 ? (
+                    result.filler_words.map((item, index) => (
+                      <div
+                        key={index}
+                        className="bg-[#202341] rounded-lg p-4 flex justify-between items-center transition-all hover:shadow-lg hover:shadow-[#7fceff]/20"
+                      >
+                        <span className="text-[#ff6db3] font-bold bg-[#ff6db3]/20 py-1 px-3 rounded-md">
+                          {item.word}
+                        </span>
+                        <span className="text-[#7fceff] font-bold">
+                          {item.count}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-[#f0f0f0]">
+                      No filler words found
+                    </p>
+                  );
+                }
                 return (
                   <Card
                     key={result.id}
@@ -408,7 +505,7 @@ export default function UserAccount() {
                           </p>
                           <p className="text-1xl font-bold">
                             {result.score
-                              ? result.score
+                              ? Math.round(result.score)
                               : "Score not available"}
                           </p>
                         </div>
@@ -438,21 +535,16 @@ export default function UserAccount() {
                           Filler Words
                         </p>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                          {Object.entries(fillerWords)
-                            .filter(([, count]) => count > 0)
-                            .map(([word, count]) => (
-                              <div
-                                key={word}
-                                className="bg-slate-800 p-2 rounded-md"
-                              >
-                                <p className="text-sm font-medium">
-                                  {word}
-                                </p>
-                                <p className="text-lg font-bold">
-                                  {count}
-                                </p>
-                              </div>
-                            ))}
+                          {result.filler_words.map((item) => (
+                            <div key={item.word}>
+                              <p className="text-sm text-slate-400">
+                                {item.word}
+                              </p>
+                              <p className="text-lg font-bold">
+                                {item.count}
+                              </p>
+                            </div>
+                          ))}
                           0
                         </div>
                       </div>
@@ -462,7 +554,11 @@ export default function UserAccount() {
                             Long Pauses
                           </p>
                           <p className="text-lg font-bold">
-                            {result.long_pauses}
+                            {result.long_pauses ? (
+                              result.long_pauses.length
+                            ) : (
+                              <span>0</span>
+                            )}
                           </p>
                         </div>
                         <div>
@@ -649,9 +745,11 @@ export default function UserAccount() {
           <Button asChild className="flex-1" variant={"primary"}>
             <Link href="/interview">Start New Interview</Link>
           </Button>
-          <Button asChild variant="outline" className="flex-1">
-            <a href="/api/auth/logout">Sign Out</a>
-          </Button>
+          <Button
+            variant="outline"
+            className="flex-1"
+            onClick={() => handleLogout(revalidate)}
+          ></Button>
         </div>
       </div>
     </div>

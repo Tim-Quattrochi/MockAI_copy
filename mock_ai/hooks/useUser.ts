@@ -21,32 +21,43 @@ export function useUser() {
 
   const supabase = createClient();
 
-  useEffect(() => {
-    async function fetchUser() {
-      try {
-        const {
-          data: { session },
-          error,
-        } = await supabase.auth.getSession();
-        if (error) throw error;
+  async function fetchUser() {
+    try {
+      const {
+        data: { session },
+        error,
+      } = await supabase.auth.getSession();
+      if (error) throw error;
 
-        if (session) {
-          setSession(session);
-          console.log("SESSION FROM SUPA: ", session);
-          setUser(session.user);
-          const decodedJwt = jwtDecode<SupabaseJwtPayload>(
-            session.access_token
-          );
-          setRole(decodedJwt.app_metadata.role);
-        }
-      } catch (error) {
-        setError(error as AuthError);
-      } finally {
-        setLoading(false);
+      if (session) {
+        setSession(session);
+
+        setUser(session.user);
+        const decodedJwt = jwtDecode<SupabaseJwtPayload>(
+          session.access_token
+        );
+        setRole(decodedJwt.app_metadata.role);
+      } else {
+        setSession(null);
+        setUser(null);
+        setRole(null);
       }
+    } catch (error) {
+      setError(error as AuthError);
+    } finally {
+      setLoading(false);
     }
+  }
+
+  useEffect(() => {
     fetchUser();
   }, []);
 
-  return { loading, error, session, user, role };
+  const revalidate = () => {
+    setLoading(true);
+    setError(null);
+    fetchUser();
+  };
+
+  return { loading, error, session, user, role, revalidate };
 }
