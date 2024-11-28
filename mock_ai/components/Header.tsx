@@ -3,7 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useUser } from "@/hooks/useUser";
 import { useRouter } from "next/navigation";
-import NavItem from "@/components/NavItem";
+import LogoutButton from "./LogoutLink";
 import { Button } from "./ui";
 
 import { createClient } from "@/utils/supabase/client";
@@ -55,13 +55,10 @@ const Header = () => {
             >
               Account
             </Link>
-            <Link
-              className="text-sm font-medium hover:text-[#ff3b9a] transition-colors cursor-pointer"
-              onClick={() => handleLogout()}
-              href="/"
-            >
-              Logout
-            </Link>
+            <LogoutButton
+              className="text-sm font-medium hover:text-[#ff3b9a] transition-colors"
+              revalidate={revalidate}
+            />
           </>
         ) : (
           <Link
