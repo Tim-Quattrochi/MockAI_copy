@@ -24,6 +24,7 @@ import { Checkbox } from "./ui/checkbox";
 import { Skeleton } from "./ui/skeleton";
 import { Save, LogOut, Play } from "lucide-react";
 import AnalysisCard from "./AnalysisCard";
+import { LogoutButton } from "./LogoutButton";
 
 const Results = () => {
   const { user, revalidate } = useUser();
@@ -325,13 +326,14 @@ const Results = () => {
             </Button>
           </div>
         )}
-        <Button
+        {/* <Button
           onClick={() => handleLogout(revalidate)}
           variant="outline"
           className="text-[#ff6db3] border-[#ff6db3] hover:bg-[#ff6db3]/10"
         >
           <LogOut className="mr-2 h-4 w-4" /> Sign Out
-        </Button>
+        </Button> */}
+        <LogoutButton />
       </div>
     </div>
   );

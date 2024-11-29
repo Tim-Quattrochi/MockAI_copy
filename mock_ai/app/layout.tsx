@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Inter } from "next/font/google";
 import { cn } from "@/lib/utils";
-import { Header, Footer } from "@/components/";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+
 import { Toaster } from "@/components/ui/toaster";
 
 const fontHeading = Inter({
