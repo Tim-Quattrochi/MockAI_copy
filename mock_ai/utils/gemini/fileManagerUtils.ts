@@ -2,14 +2,11 @@ import {
   GoogleAIFileManager,
   FileState,
 } from "@google/generative-ai/server";
-import path from "path";
 
 export async function uploadAndProcessFile(
   fileManager: GoogleAIFileManager,
   videoFilePath: string
 ) {
-  const resolvedFilePath = path.join(process.cwd(), videoFilePath);
-
   console.log("RESOLVED FILE PATH:", resolvedFilePath);
   const uploadResult = await fileManager.uploadFile(videoFilePath, {
     mimeType: "audio/wav",

@@ -96,8 +96,6 @@ export async function POST(
 
     writeFileSync(tmpPath, buffer);
 
-    console.log("signedURL: ", signedUrl);
-
     const transcriptionResponse = await fetch(
       `${process.env.NEXT_PUBLIC_APP_URL}/api/audio/transcribe`,
       {
