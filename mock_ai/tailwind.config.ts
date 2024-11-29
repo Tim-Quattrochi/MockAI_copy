@@ -6,11 +6,23 @@ module.exports = {
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
-  mode: "jit",
+
   theme: {
     extend: {
       fontFamily: {
-        inter: ["Inter", "sans-serif"],
+        sans: ["var(--font-roboto)", "sans-serif"],
+        heading: ["var(--font-inter)", "sans-serif"],
+        subheading: ["var(--font-poppins)", "sans-serif"],
+      },
+      fontWeight: {
+        light: "300",
+        regular: "400",
+        medium: "500",
+        bold: "600",
+        extraBold: "700",
+      },
+      lineHeight: {
+        normal: "1.6",
       },
       colors: {
         "black-100": "#2B2C35",
@@ -98,7 +110,7 @@ module.exports = {
         pattern: "url('/pattern.png')",
         "hero-bg": "url('/hero-bg.png')",
       },
-      titleColor: {
+      headingColor: {
         DEFAULT: "#7fceff",
       },
       borderRadius: {

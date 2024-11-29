@@ -1,23 +1,33 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Inter } from "next/font/google";
+import { Poppins, Inter, Roboto } from "next/font/google";
 import { cn } from "@/lib/utils";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
 import { Toaster } from "@/components/ui/toaster";
 
-const fontHeading = Inter({
+const inter = Inter({
   subsets: ["latin"],
+  weight: ["700"],
   display: "swap",
-  variable: "--font-heading",
+  variable: "--font-inter",
 });
 
-const fontBody = Inter({
+const poppins = Poppins({
   subsets: ["latin"],
+  weight: ["600"],
   display: "swap",
-  variable: "--font-body",
+  variable: "--font-poppins",
 });
+
+const roboto = Roboto({
+  subsets: ["latin"],
+  weight: ["400"],
+  display: "swap",
+  variable: "--font-roboto",
+});
+
 export const metadata: Metadata = {
   title: "MockAI",
   description: "Level up your interviewing skills.",
@@ -42,9 +52,12 @@ export default function RootLayout({
       <body
         id="main"
         className={cn(
-          "antialiased",
-          fontHeading.variable,
-          fontBody.variable
+          "antialiased", // Include your antialiased class
+          inter.variable, // Apply Inter font variable for headings
+          poppins.variable, // Apply Poppins font variable for subheadings and CTAs
+          roboto.variable, // Apply Roboto font variable for body text
+          "bg-[#0a0b2e]", // Your custom background color
+          "text-white" // Your text color
         )}
       >
         {" "}
