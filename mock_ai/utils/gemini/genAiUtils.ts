@@ -38,7 +38,7 @@ export async function generateTranscription(
     {
       fileData: {
         fileUri: fileUri,
-        mimeType: "audio/wav",
+        mimeType: fileUri.file.mimeType,
       },
     },
   ]);
