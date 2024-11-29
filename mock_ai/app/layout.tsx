@@ -21,13 +21,6 @@ const poppins = Poppins({
   variable: "--font-poppins",
 });
 
-const roboto = Roboto({
-  subsets: ["latin"],
-  weight: ["400"],
-  display: "swap",
-  variable: "--font-roboto",
-});
-
 export const metadata: Metadata = {
   title: "MockAI",
   description: "Level up your interviewing skills.",
@@ -52,12 +45,9 @@ export default function RootLayout({
       <body
         id="main"
         className={cn(
-          "antialiased", // Include your antialiased class
-          inter.variable, // Apply Inter font variable for headings
-          poppins.variable, // Apply Poppins font variable for subheadings and CTAs
-          roboto.variable, // Apply Roboto font variable for body text
-          "bg-[#0a0b2e]", // Your custom background color
-          "text-white" // Your text color
+          "antialiased",
+          inter.variable,
+          poppins.variable
         )}
       >
         {" "}
