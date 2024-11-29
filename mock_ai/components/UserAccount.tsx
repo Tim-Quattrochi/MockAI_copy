@@ -3,14 +3,14 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import Link from "next/link";
-import { handleGetallResults } from "@/app/user_account/actions";
-import { handleLogout } from "@/utils/supabase/helpers";
 
 // Hooks
 import { useToast } from "@/hooks/useToast";
 import { useUser } from "@/hooks/useUser";
 
 // UI components
+import { LogoutButton } from "./LogoutButton";
+
 import {
   Button,
   Skeleton,
@@ -65,8 +65,11 @@ import {
 } from "lucide-react";
 // Utilities
 import { formatPauseDurations } from "@/lib/formatSeconds";
+//services
+import { handleGetallResults } from "@/app/user_account/actions";
+
 //types
-import { FilterType } from "@/types";
+import { FilterType, joinedInterviewResult } from "@/types";
 
 interface FillerWord {
   word: string;
@@ -79,7 +82,7 @@ interface Pause {
   end: number;
 }
 
-interface InterviewResult {
+export interface InterviewResult {
   id: string;
   question: string;
   score: number;
@@ -94,16 +97,11 @@ interface InterviewResult {
 }
 
 export default function UserAccount() {
-  const {
-    user,
-    loading: userLoading,
-    error: userError,
-    revalidate,
-  } = useUser();
+  const { user, loading: userLoading, error: userError } = useUser();
 
-  const [results, setResults] = useState<InterviewResult[]>([]);
+  const [results, setResults] = useState<joinedInterviewResult[]>([]);
   const [filteredResults, setFilteredResults] = useState<
-    InterviewResult[]
+    joinedInterviewResult[]
   >([]);
   const [sortBy, setSortBy] = useState<"asc" | "desc">("desc");
   const [loading, setLoading] = useState(true);
@@ -252,39 +250,44 @@ export default function UserAccount() {
   }, [user]);
 
   useEffect(() => {
-    const filtered = results.filter((result) => {
-      if (filter === "all") return true;
-      if (filter === "video") return result.video_url !== null;
-      if (filter === "voice")
-        return result.audio_url !== null && result.video_url === null;
-      if (filter === "behavioral")
-        return result.interview_type === "behavioral";
-      if (filter === "technical")
-        return result.interview_type === "technical";
-      if (filter === "behavioral-video")
-        return (
-          result.interview_type === "behavioral" &&
-          result.video_url !== null
-        );
-      if (filter === "behavioral-voice")
-        return (
-          result.interview_type === "behavioral" &&
-          result.audio_url !== null &&
-          result.video_url === null
-        );
-      if (filter === "technical-video")
-        return (
-          result.interview_type === "technical" &&
-          result.video_url !== null
-        );
-      if (filter === "technical-voice")
-        return (
-          result.interview_type === "technical" &&
-          result.audio_url !== null &&
-          result.video_url === null
-        );
-      return false;
-    });
+    const filtered = results.filter(
+      (result: joinedInterviewResult) => {
+        if (filter === "all") return true;
+        if (filter === "video") return result.video_url !== null;
+        if (filter === "voice")
+          return (
+            result.audio_url !== null && result.video_url === null
+          );
+
+        if (filter === "behavioral")
+          return result.interview_type === "behavioral";
+        if (filter === "technical")
+          return result.interview_type === "technical";
+        if (filter === "behavioral-video")
+          return (
+            result.interview_type === "behavioral" &&
+            result.video_url !== null
+          );
+        if (filter === "behavioral-voice")
+          return (
+            result.interview_type === "behavioral" &&
+            result.audio_url !== null &&
+            result.video_url === null
+          );
+        if (filter === "technical-video")
+          return (
+            result.interview_type === "technical" &&
+            result.video_url !== null
+          );
+        if (filter === "technical-voice")
+          return (
+            result.interview_type === "technical" &&
+            result.audio_url !== null &&
+            result.video_url === null
+          );
+        return false;
+      }
+    );
     setFilteredResults(filtered);
   }, [filter, results]);
 
@@ -578,18 +581,22 @@ export default function UserAccount() {
                           <Button
                             variant="outline"
                             onClick={() =>
-                              toggleFeedbackExpansion(result.id)
+                              toggleFeedbackExpansion(
+                                Number(result.id)
+                              )
                             }
                             className="w-full justify-between"
                           >
                             AI Feedback
-                            {expandedFeedbackId === result.id ? (
+                            {expandedFeedbackId ===
+                            Number(result.id) ? (
                               <ChevronUp className="h-4 w-4" />
                             ) : (
                               <ChevronDown className="h-4 w-4" />
                             )}
                           </Button>
-                          {expandedFeedbackId === result.id && (
+                          {expandedFeedbackId ===
+                            Number(result.id) && (
                             <ScrollArea className="h-[200px] mt-2 rounded-md border border-slate-800 p-4">
                               <p className="text-slate-300">
                                 {result.ai_feedback}
@@ -638,7 +645,9 @@ export default function UserAccount() {
                     <CardFooter>
                       <Button
                         variant="destructive"
-                        onClick={() => handleOpenDialog(result.id)}
+                        onClick={() =>
+                          handleOpenDialog(Number(result.id))
+                        }
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
                         <span className="font-bold">
@@ -745,11 +754,11 @@ export default function UserAccount() {
           <Button asChild className="flex-1" variant={"primary"}>
             <Link href="/interview">Start New Interview</Link>
           </Button>
-          <Button
+
+          <LogoutButton
             variant="outline"
-            className="flex-1"
-            onClick={() => handleLogout(revalidate)}
-          ></Button>
+            className="flex-1 text-white bg-light-white"
+          />
         </div>
       </div>
     </div>
