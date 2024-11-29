@@ -59,4 +59,4 @@ export type InterviewData = {
 
 export type FilterType = "all" | "video" | "voice";
 
-export type joinedInterviewResult = InterviewResult & Question;
+export type JoinedInterviewResult = InterviewResult & Question;

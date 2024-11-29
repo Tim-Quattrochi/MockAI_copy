@@ -1,12 +1,11 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
 import axios from "axios";
 import Link from "next/link";
 
 // Hooks
+import React, { useEffect, useState } from "react";
 import { useToast } from "@/hooks/useToast";
-import { useUser } from "@/hooks/useUser";
 
 // UI components
 import { LogoutButton } from "./LogoutButton";
@@ -35,15 +34,7 @@ import {
 } from "../components/ui";
 import VideoPlayer from "./VideoPlayer";
 // Pagination components
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-  PaginationEllipsis,
-} from "./ui/pagination";
+import PaginationClient from "./Pagination";
 // Alert Dialog components
 import {
   AlertDialog,
@@ -56,20 +47,12 @@ import {
   AlertDialogFooter,
 } from "./ui/alert-dialog";
 // Icons
-import {
-  ChevronDown,
-  ChevronUp,
-  Trash2,
-  Video,
-  Mic,
-} from "lucide-react";
+import { ChevronDown, ChevronUp, Trash2, Mic } from "lucide-react";
 // Utilities
 import { formatPauseDurations } from "@/lib/formatSeconds";
-//services
-import { handleGetallResults } from "@/app/user_account/actions";
-
+import { User, AuthError } from "@supabase/supabase-js";
 //types
-import { FilterType, joinedInterviewResult } from "@/types";
+import { FilterType, JoinedInterviewResult } from "@/types";
 
 interface FillerWord {
   word: string;
@@ -96,17 +79,27 @@ export interface InterviewResult {
   audio_url: string | null;
 }
 
-export default function UserAccount() {
-  const { user, loading: userLoading, error: userError } = useUser();
+interface UserAccountClientProps {
+  fullUserHistory: JoinedInterviewResult[];
+  resultsPerPage: number;
+  userError: AuthError | null;
+  user: User;
+}
 
-  const [results, setResults] = useState<joinedInterviewResult[]>([]);
+export default function UserAccountClient({
+  fullUserHistory,
+  resultsPerPage,
+  userError,
+  user,
+}: UserAccountClientProps) {
+  const [results, setResults] = useState<JoinedInterviewResult[]>([]);
   const [filteredResults, setFilteredResults] = useState<
-    joinedInterviewResult[]
+    JoinedInterviewResult[]
   >([]);
   const [sortBy, setSortBy] = useState<"asc" | "desc">("desc");
   const [loading, setLoading] = useState(true);
   const [expandedFeedbackId, setExpandedFeedbackId] = useState<
-    number | null
+    string | null
   >(null);
   const [filter, setFilter] = useState<FilterType>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -114,27 +107,15 @@ export default function UserAccount() {
     number | null
   >(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const resultsPerPage = 5;
+  const [userLoading, setUserLoading] = useState(true);
 
-  const userPicture = user?.user_metadata?.avatar_url || null;
-  const uname =
-    user?.user_metadata?.full_name ||
-    user?.user_metadata.name ||
-    "User";
-  const userEmail = user?.email || "";
+  const {
+    id: userId,
+    email,
+    user_metadata: { name, picture, fullname },
+  } = user;
 
   const { toast, dismiss } = useToast();
-
-  async function userInterviewHistory() {
-    let results = [];
-    if (user?.id && !userLoading) {
-      results = await handleGetallResults(user?.id);
-    }
-
-    return results;
-  }
-
-  const fullUserHistory = userInterviewHistory();
 
   const paginatedResults = filteredResults.slice(
     (currentPage - 1) * resultsPerPage,
@@ -147,77 +128,6 @@ export default function UserAccount() {
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
-  };
-
-  const renderPageLinks = () => {
-    const pages = [];
-    const maxVisiblePages = 5; // Max number of pages to show at once
-    const halfVisible = Math.floor(maxVisiblePages / 2);
-
-    // First, determine the visible range
-    let startPage = Math.max(currentPage - halfVisible, 1);
-    let endPage = Math.min(currentPage + halfVisible, totalPages);
-
-    // Ensure the visible pages range stays within the page count
-    if (currentPage <= halfVisible) {
-      endPage = Math.min(maxVisiblePages, totalPages);
-    } else if (currentPage > totalPages - halfVisible) {
-      startPage = Math.max(totalPages - maxVisiblePages + 1, 1);
-    }
-
-    // Add "First" page link if needed
-    if (startPage > 1) {
-      pages.push(
-        <PaginationItem key="first">
-          <PaginationLink onClick={() => handlePageChange(1)}>
-            1
-          </PaginationLink>
-        </PaginationItem>
-      );
-      if (startPage > 2) {
-        pages.push(
-          <PaginationItem key="start-ellipsis">
-            <PaginationEllipsis />
-          </PaginationItem>
-        );
-      }
-    }
-
-    // Add the visible page range
-    for (let i = startPage; i <= endPage; i++) {
-      pages.push(
-        <PaginationItem key={i}>
-          <PaginationLink
-            isActive={i === currentPage}
-            onClick={() => handlePageChange(i)}
-          >
-            {i}
-          </PaginationLink>
-        </PaginationItem>
-      );
-    }
-
-    // Add "Last" page link if needed
-    if (endPage < totalPages) {
-      if (endPage < totalPages - 1) {
-        pages.push(
-          <PaginationItem key="end-ellipsis">
-            <PaginationEllipsis />
-          </PaginationItem>
-        );
-      }
-      pages.push(
-        <PaginationItem key="last">
-          <PaginationLink
-            onClick={() => handlePageChange(totalPages)}
-          >
-            {totalPages}
-          </PaginationLink>
-        </PaginationItem>
-      );
-    }
-
-    return pages;
   };
 
   const showToast = (
@@ -240,18 +150,18 @@ export default function UserAccount() {
   };
 
   useEffect(() => {
-    if (user?.id && !userLoading) {
-      fullUserHistory.then((results) => {
-        setResults(results);
-        setFilteredResults(results);
-        setLoading(false);
-      });
+    if (userId && !userError) {
+      setLoading(false);
+      setResults(fullUserHistory);
+      setFilteredResults(fullUserHistory);
+      setUserLoading(false);
     }
-  }, [user]);
+    setUserLoading(false);
+  }, [userId]);
 
   useEffect(() => {
     const filtered = results.filter(
-      (result: joinedInterviewResult) => {
+      (result: JoinedInterviewResult) => {
         if (filter === "all") return true;
         if (filter === "video") return result.video_url !== null;
         if (filter === "voice")
@@ -301,18 +211,6 @@ export default function UserAccount() {
     setFilteredResults(sortedResults);
   };
 
-  const handleSortByType = (type: string) => {
-    const sortedResults = [...filteredResults].sort((a, b) => {
-      if (type === "technical") {
-        return a.interview_type ? -1 : 1;
-      } else if (type === "behavioral") {
-        return a.interview_type ? 1 : -1;
-      }
-      return 0;
-    });
-    setFilteredResults(sortedResults);
-  };
-
   const handleDelete = () => {
     if (!selectedResultId) return;
 
@@ -338,7 +236,7 @@ export default function UserAccount() {
       });
   };
 
-  const toggleFeedbackExpansion = (resultId: number) => {
+  const toggleFeedbackExpansion = (resultId: string) => {
     setExpandedFeedbackId((prevId) =>
       prevId === resultId ? null : resultId
     );
@@ -356,27 +254,27 @@ export default function UserAccount() {
     <div className="min-h-screen bg-slate-950 text-slate-50 p-4 md:p-8">
       <div className="max-w-4xl mx-auto space-y-8">
         <div className="flex items-center space-x-4">
-          <Avatar className="w-16 h-16">
+          <Avatar className="w-16 h-16 overflow-hidden bg-slate-800">
             <AvatarImage
-              src={userPicture}
+              src={picture || ""}
               alt={
-                uname
-                  ? `${uname}'s profile picture`
+                name
+                  ? `${name}'s profile picture`
                   : "User's profile picture"
               }
             />
             <AvatarFallback>
-              {uname.charAt(0).toUpperCase() || "U"}
+              {name.charAt(0).toUpperCase() || "U"}
             </AvatarFallback>
           </Avatar>
           <div>
-            <h2 className="text-2xl font-bold">{uname}</h2>
-            <p className="text-slate-400">{userEmail}</p>
+            <h2 className="text-2xl font-bold">{name}</h2>
+            <p className="text-slate-500">{email}</p>
           </div>
         </div>
 
         <div>
-          <h1 className="text-3xl font-bold mb-4">
+          <h1 className="text-3xl font-bold mb-4 font-heading">
             Previous Interview Results
           </h1>
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 space-y-4 sm:space-y-0">
@@ -414,22 +312,50 @@ export default function UserAccount() {
                   }
                 >
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="all" id="all" />
-                    <Label htmlFor="all">All</Label>
+                    <RadioGroupItem
+                      value="all"
+                      id="all"
+                      className="text-sm rounded-full border-2 border-slate-700 p-2 transition-all duration-200 hover:bg-slate-700 focus:ring-2 focus:ring-primary-500 checked:bg-primary-blue-200 checked:border-transparent"
+                    />
+                    <Label
+                      htmlFor="all"
+                      className="text-sm text-slate-300"
+                    >
+                      All
+                    </Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem
+                      value="video"
+                      id="video"
+                      className="text-sm rounded-full border-2 border-slate-700 p-2 transition-all duration-200 hover:bg-slate-700 focus:ring-2 focus:ring-primary-500 checked:bg-primary-blue-200 checked:border-transparent"
+                    />
+                    <Label
+                      htmlFor="video"
+                      className="text-sm text-slate-300"
+                    >
+                      Video
+                    </Label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="video" id="video" />
-                    <Label htmlFor="video">Video</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="voice" id="voice" />
-                    <Label htmlFor="voice">Voice</Label>
+                    <RadioGroupItem
+                      value="voice"
+                      id="voice"
+                      className="text-sm rounded-full border-2 border-slate-700 p-2 transition-all duration-200 hover:bg-slate-700 focus:ring-2 focus:ring-primary-500 checked:bg-primary-500 checked:border-transparent"
+                    />
+                    <Label
+                      htmlFor="voice"
+                      className="text-sm text-slate-300"
+                    >
+                      Voice
+                    </Label>
                   </div>
                 </RadioGroup>
               </div>
 
               <div>
-                <h3 className="text-lg font-semibold mb-2">
+                <h3 className="text-lg font-semibold mb-2 slate-200">
                   Filter by Interview Type
                 </h3>
                 <RadioGroup
@@ -443,6 +369,7 @@ export default function UserAccount() {
                     <RadioGroupItem
                       value="behavioral"
                       id="behavioral"
+                      className="text-sm rounded-full border-2 border-slate-700 p-2 transition-all duration-200 hover:bg-slate-700 focus:ring-2 focus:ring-primary-500 checked:bg-primary-blue-200 checked:border-transparent"
                     />
                     <Label htmlFor="behavioral">Behavioral</Label>
                   </div>
@@ -450,6 +377,7 @@ export default function UserAccount() {
                     <RadioGroupItem
                       value="technical"
                       id="technical"
+                      className="text-sm rounded-full border-2 border-slate-700 p-2 transition-all duration-200 hover:bg-slate-700 focus:ring-2 focus:ring-primary-500 checked:bg-primary-blue-200 checked:border-transparent"
                     />
                     <Label htmlFor="technical">Technical</Label>
                   </div>
@@ -493,7 +421,7 @@ export default function UserAccount() {
                     className="bg-slate-900 border-slate-800"
                   >
                     <CardHeader>
-                      <p className="text-xl text-slate-400 mb-1">
+                      <p className="text-md md:text-2xl text-center font-subheading text-primary mb-1">
                         Question
                       </p>
                       <CardTitle className="text-xl text-slate-200">
@@ -506,7 +434,7 @@ export default function UserAccount() {
                           <p className="text-sm text-slate-400">
                             Score
                           </p>
-                          <p className="text-1xl font-bold">
+                          <p className="text-1xl font-bold text-purple-400">
                             {result.score
                               ? Math.round(result.score)
                               : "Score not available"}
@@ -538,17 +466,24 @@ export default function UserAccount() {
                           Filler Words
                         </p>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                          {result.filler_words.map((item) => (
-                            <div key={item.word}>
-                              <p className="text-sm text-slate-400">
-                                {item.word}
-                              </p>
-                              <p className="text-lg font-bold">
-                                {item.count}
-                              </p>
-                            </div>
-                          ))}
-                          0
+                          {result.filler_words.length > 0 ? (
+                            result.filler_words.map(
+                              (item: FillerWord) => (
+                                <div key={item.word}>
+                                  <p className="text-sm text-slate-400">
+                                    {item.word}
+                                  </p>
+                                  <p className="text-lg font-bold">
+                                    {item.count}
+                                  </p>
+                                </div>
+                              )
+                            )
+                          ) : (
+                            <p className="text-slate-300">
+                              No filler words found
+                            </p>
+                          )}
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
@@ -581,22 +516,18 @@ export default function UserAccount() {
                           <Button
                             variant="outline"
                             onClick={() =>
-                              toggleFeedbackExpansion(
-                                Number(result.id)
-                              )
+                              toggleFeedbackExpansion(result.id)
                             }
                             className="w-full justify-between"
                           >
                             AI Feedback
-                            {expandedFeedbackId ===
-                            Number(result.id) ? (
+                            {expandedFeedbackId === result.id ? (
                               <ChevronUp className="h-4 w-4" />
                             ) : (
                               <ChevronDown className="h-4 w-4" />
                             )}
                           </Button>
-                          {expandedFeedbackId ===
-                            Number(result.id) && (
+                          {expandedFeedbackId === result.id && (
                             <ScrollArea className="h-[200px] mt-2 rounded-md border border-slate-800 p-4">
                               <p className="text-slate-300">
                                 {result.ai_feedback}
@@ -700,54 +631,11 @@ export default function UserAccount() {
           )}
         </div>
         <div className="space-y-4">
-          {paginatedResults.map((result) => (
-            <Card
-              key={result.id}
-              className="bg-slate-900 border-slate-800"
-            ></Card>
-          ))}
-
-          <Pagination className="mt-4">
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  onClick={() =>
-                    handlePageChange(Math.max(1, currentPage - 1))
-                  }
-                  className={currentPage === 1 ? "disabled" : ""}
-                />
-              </PaginationItem>
-
-              {/* Ellipsis for large page numbers */}
-              {currentPage > 3 && (
-                <PaginationItem>
-                  <PaginationEllipsis />
-                </PaginationItem>
-              )}
-
-              {/* Render dynamically generated page links */}
-              {renderPageLinks()}
-
-              {currentPage < totalPages - 2 && (
-                <PaginationItem>
-                  <PaginationEllipsis />
-                </PaginationItem>
-              )}
-
-              <PaginationItem>
-                <PaginationNext
-                  onClick={() =>
-                    handlePageChange(
-                      Math.min(totalPages, currentPage + 1)
-                    )
-                  }
-                  className={
-                    currentPage === totalPages ? "disabled" : ""
-                  }
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
+          <PaginationClient
+            currentPage={currentPage}
+            onPageChange={handlePageChange}
+            totalPages={totalPages}
+          />
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4">

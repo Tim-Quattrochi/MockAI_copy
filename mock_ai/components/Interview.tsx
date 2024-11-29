@@ -61,10 +61,12 @@ const Interview = () => {
   const router = useRouter();
 
   const handleNavigateToResults = () => {
-    if (!selectedQuestion.id) return;
-    console.log("Clicked");
+    if (!selectedQuestion) return;
+
     router.push(
-      `/results?question=${encodeURIComponent(selectedQuestion.question)}&questionId=${encodeURIComponent(selectedQuestion.id)}`
+      `/results?question=${encodeURIComponent(
+        selectedQuestion.question
+      )}&questionId=${encodeURIComponent(selectedQuestion.id)}`
     );
   };
 
@@ -134,13 +136,11 @@ const Interview = () => {
     );
   }
 
-  console.log("question from interview", selectedQuestion);
-
   return (
     <div className="hero flex min-h-screen flex-col items-center justify-center  p-4">
       <Card className="w-full max-w-2xl bg-[#0a0b24]">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold text-titleColor">
+          <CardTitle className="text-2xl font-bold text-headingColor">
             {step !== 6 && "Interview Meeting Room"}
           </CardTitle>
           <CardDescription className="text-grey">
@@ -217,7 +217,6 @@ const Interview = () => {
               </div>
               <Button
                 onClick={handleNextStep}
-                onKe
                 className="w-full bg-primary-blue text-primary-blue-100 hover:bg-secondary-orange"
               >
                 Next <ArrowRight className="ml-2 h-4 w-4" />
