@@ -43,6 +43,7 @@ export async function POST(
       .toString(36)
       .substring(2, 15)}.${fileName.split(".").pop()}`;
     const uniqueFilePath = `${authedUser.id}/${uniqueFileName}`;
+    const mimeType = file.type;
 
     const { data, error } = await supabase.storage
       .from("audio-interviews")
@@ -104,6 +105,7 @@ export async function POST(
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          mimeType: mimeType,
           videoFilePath: tmpPath,
           user: authedUser,
           questionId: questionId,

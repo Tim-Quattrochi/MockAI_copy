@@ -17,6 +17,7 @@ export async function POST(
     const {
       //Note to self: req data from api/audio/upload/route.ts
       videoFilePath,
+      mimeType,
       questionId,
       user: authedUser,
       name: candidateName,
@@ -36,7 +37,8 @@ export async function POST(
 
     const fileUri = await uploadAndProcessFile(
       fileManager,
-      videoFilePath
+      videoFilePath,
+      mimeType
     );
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);

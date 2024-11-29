@@ -5,12 +5,12 @@ import {
 
 export async function uploadAndProcessFile(
   fileManager: GoogleAIFileManager,
-  videoFilePath: string
+  videoFilePath: string,
+  mimeType: string
 ) {
-  console.log("RESOLVED FILE PATH:", resolvedFilePath);
   const uploadResult = await fileManager.uploadFile(videoFilePath, {
-    mimeType: "audio/wav",
-    displayName: path.basename(resolvedFilePath),
+    mimeType,
+    displayName: videoFilePath.split("/").pop(),
   });
 
   let file = await fileManager.getFile(uploadResult.file.name);
