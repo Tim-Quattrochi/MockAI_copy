@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, Suspense, FC } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import axios from "axios";
 import { useUser } from "@/hooks/useUser";
 import { useSearchParams } from "next/navigation";
@@ -11,7 +11,6 @@ import { Progress } from "./ui/progress";
 import { useRouter } from "next/navigation";
 import { Info, ClipboardPenLine } from "lucide-react";
 import { useToast } from "@/hooks/useToast";
-import { handleLogout } from "@/utils/supabase/helpers";
 import { Result } from "@/types";
 
 import {
@@ -326,14 +325,11 @@ const Results = () => {
             </Button>
           </div>
         )}
-        {/* <Button
-          onClick={() => handleLogout(revalidate)}
+
+        <LogoutButton
+          className="text-[#ff6db3] border-[#ff6db3] hover:bg-[#ff6db6]"
           variant="outline"
-          className="text-[#ff6db3] border-[#ff6db3] hover:bg-[#ff6db3]/10"
-        >
-          <LogOut className="mr-2 h-4 w-4" /> Sign Out
-        </Button> */}
-        <LogoutButton />
+        />
       </div>
     </div>
   );

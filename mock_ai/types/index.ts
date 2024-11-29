@@ -1,3 +1,5 @@
+import { InterviewResult } from "@/components/UserAccount";
+
 export type Feedback = {
   filler_word_count: {
     like: number;
@@ -56,3 +58,5 @@ export type InterviewData = {
 };
 
 export type FilterType = "all" | "video" | "voice";
+
+export type joinedInterviewResult = InterviewResult & Question;
