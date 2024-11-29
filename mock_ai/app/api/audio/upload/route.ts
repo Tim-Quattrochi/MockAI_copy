@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import path from "path";
-import fs from "fs/promises";
-import { access } from "fs/promises";
+import fs, { access } from "fs/promises";
+import { writeFileSync } from "fs";
 
 export async function POST(
   request: NextRequest
@@ -39,7 +39,9 @@ export async function POST(
       );
     }
 
-    const uniqueFileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileName.split(".").pop()}`;
+    const uniqueFileName = `${Date.now()}-${Math.random()
+      .toString(36)
+      .substring(2, 15)}.${fileName.split(".").pop()}`;
     const uniqueFilePath = `${authedUser.id}/${uniqueFileName}`;
 
     const { data, error } = await supabase.storage
@@ -90,16 +92,9 @@ export async function POST(
     const arrayBuffer = await response.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    const tmpDir = path.join(process.cwd(), "tmp");
-    try {
-      await access(tmpDir);
-    } catch (err) {
-      fs.mkdir(tmpDir);
-    }
+    const tmpPath = `/tmp/${uniqueFileName}`;
 
-    const tmpFilePath = path.join(tmpDir, uniqueFileName);
-
-    fs.writeFile(tmpFilePath, buffer);
+    writeFileSync(tmpPath, buffer);
 
     console.log("signedURL: ", signedUrl);
 
@@ -111,7 +106,7 @@ export async function POST(
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          videoFilePath: tmpFilePath,
+          videoFilePath: tmpPath,
           user: authedUser,
           questionId: questionId,
           question: question,
