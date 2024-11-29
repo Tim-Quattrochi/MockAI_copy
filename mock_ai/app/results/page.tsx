@@ -1,4 +1,3 @@
-// import Image from 'next/image'
 import ResultsPage from "@/components/Results";
 
 export default function results() {
