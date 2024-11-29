@@ -32,6 +32,8 @@ export async function POST(
       process.env.GEMINI_API_KEY!
     );
 
+    console.log("VIDEO FILE PATH:", videoFilePath);
+
     const fileUri = await uploadAndProcessFile(
       fileManager,
       videoFilePath
