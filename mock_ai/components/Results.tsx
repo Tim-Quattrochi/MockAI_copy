@@ -4,7 +4,7 @@ import React, { useEffect, useState, Suspense } from "react";
 import axios from "axios";
 import { useUser } from "@/hooks/useUser";
 import { useSearchParams } from "next/navigation";
-import { createClient } from "@/utils/supabase/client";
+import { createClient } from "@/supabase/client";
 import { Button } from "./ui/Button";
 import { getResultByQuestionId } from "@/lib/database/feedback";
 import { Progress } from "./ui/progress";
@@ -31,7 +31,6 @@ const Results = () => {
   const [saveResults, setSaveResults] = useState(false);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [resultsLoading, setResultsLoading] = useState(true);
-  const [email, setEmail] = useState(user?.email);
   const [resultsSaved, setResultsSaved] = useState(false);
   const [analysisError, setAnalysisError] = useState(false);
 
@@ -44,11 +43,9 @@ const Results = () => {
 
   const supabase = createClient();
 
-  const router = useRouter();
+  const { email } = user;
 
-  useEffect(() => {
-    setEmail(user?.email);
-  }, [user?.email]);
+  const router = useRouter();
 
   useEffect(() => {
     if (questionId) {

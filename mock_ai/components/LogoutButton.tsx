@@ -1,8 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-
-import { createClient } from "@/utils/supabase/client";
+import { createClient } from "@/supabase/client";
 import { Button, ButtonProps } from "@/components/ui/Button";
 
 interface LogoutButtonProps extends ButtonProps {}

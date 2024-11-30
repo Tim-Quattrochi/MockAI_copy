@@ -1,7 +1,7 @@
 import React from "react";
 import { FaUser } from "react-icons/fa6";
 
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/supabase/server";
 import {
   DropdownMenu,
   DropdownMenuContent,

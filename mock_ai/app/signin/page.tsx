@@ -2,7 +2,7 @@
 
 import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { createClient } from "@/utils/supabase/client";
+import { createClient } from "@/supabase/client";
 import { Button, CardHeader } from "@/components/ui";
 import { Card } from "@/components/ui";
 import { Icons } from "@/components/ui/icons";

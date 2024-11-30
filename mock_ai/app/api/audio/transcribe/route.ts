@@ -1,4 +1,4 @@
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { schema as genAiResultsSchema } from "@/utils/gemini/transcriptionSchema";
 import { GoogleGenerativeAI } from "@google/generative-ai";

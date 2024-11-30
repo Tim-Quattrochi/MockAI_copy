@@ -1,6 +1,5 @@
 import { Question } from "@/types";
-import { createClient } from "@/utils/supabase/server";
-
+import { createClient } from "@/supabase/server";
 const supabasePromise = createClient();
 
 export async function saveQuestion(data: {

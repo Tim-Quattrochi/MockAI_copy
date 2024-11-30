@@ -1,4 +1,4 @@
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/supabase/server";
 import { JoinedInterviewResult } from "@/types";
 
 export async function handleGetallResults(
@@ -37,5 +37,6 @@ export async function handleGetallResults(
     })
   );
 
+  console.log(serializedResults[0]);
   return serializedResults;
 }

@@ -1,6 +1,6 @@
 // UserAccount.server.tsx
 import { handleGetallResults } from "./actions";
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/supabase/server";
 import { UserResponse, User } from "@supabase/supabase-js";
 import UserAccountClient from "@/components/UserAccount";
 import { JoinedInterviewResult } from "@/types";

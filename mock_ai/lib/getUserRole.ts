@@ -2,7 +2,7 @@ import "server-only";
 
 import { JWTPayload, jwtVerify } from "jose";
 
-import { createClient } from "../utils/supabase/server";
+import { createClient } from "@/supabase/server";
 
 // Extend the JWTPayload type to include Supabase-specific metadata
 type SupabaseJwtPayload = JWTPayload & {
