@@ -23,7 +23,7 @@ export async function POST(
       company,
       position,
       questionType,
-      question,
+      question_text: question,
     } = await request.json();
 
     const supabase = await createClient();
