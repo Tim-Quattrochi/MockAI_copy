@@ -25,8 +25,8 @@ export async function UserAccountNav() {
   }
 
   return (
-    <div className="w-max space-x-2">
-      <DropdownMenu>
+    <div className="w-max space-x-2 bg-[#8a7b96]">
+      <DropdownMenu className="bg-[#8a7b96]">
         <DropdownMenuTrigger className="flex items-center space-x-1">
           <div className="bg-border grid size-7 place-items-center rounded-full">
             {user ? (
@@ -64,7 +64,7 @@ export async function UserAccountNav() {
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild className="cursor-pointer">
-            <LogoutButton />
+            <LogoutButton variant="logout" className="bg-[#4A2B6A]" />
           </DropdownMenuItem>
 
           <DropdownMenuSeparator />

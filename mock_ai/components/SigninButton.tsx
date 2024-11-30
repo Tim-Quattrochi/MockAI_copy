@@ -12,7 +12,7 @@ export function SignInButton() {
 
   return pathname !== "/signin" ? (
     <Link
-      href="/signin"
+      href="/auth/signin"
       className={cn(
         buttonVariants({ variant: "signin", size: "sm" })
       )}

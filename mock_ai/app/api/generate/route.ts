@@ -50,10 +50,10 @@ export async function POST(req: Request) {
 
     const { data: question, error: errorWhileSavingQuestion } =
       await supabase
-        .from("question")
+        .from("questions")
         .insert([
           {
-            question: output,
+            question_text: output,
             name: data.name,
             company: data.company,
             position: data.position,

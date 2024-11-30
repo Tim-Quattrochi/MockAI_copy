@@ -119,7 +119,7 @@ const Results = () => {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    router.push("/signin");
+    router.push("/auth/signin");
     router.refresh();
   };
 

@@ -1,8 +1,15 @@
-import { type NextRequest } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@/supabase/middleware";
 
 export async function middleware(request: NextRequest) {
-  return await updateSession(request);
+  const response = await updateSession(request);
+
+  // allow guest users to access the home page
+  if (request.nextUrl.pathname === "/") {
+    return NextResponse.next();
+  }
+
+  return response;
 }
 
 export const config = {
@@ -14,7 +21,7 @@ export const config = {
      * - favicon.ico (favicon file)
      * Feel free to modify this pattern to include more paths.
      */
-    "/((?!_next/static|about|tips|_next/image|favicon.ico|mockai_vid.mp4|api/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|about|tips|_next/image|auth/signin|favicon.ico|mockai_vid.mp4|api/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
     "/protected",
     "/admin/:path*",
   ],

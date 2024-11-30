@@ -164,7 +164,7 @@ export async function POST(
           fileUri: genaiUploadedFile.file.uri,
           user: authedUser,
           questionId: questionId,
-          question: question,
+          question_text: question,
           userEmail: userEmail,
           company: company,
           position: position,
@@ -179,7 +179,7 @@ export async function POST(
     // I am getting the question id so I can insert it into the results table as a foreign key.
     const { data: questionData, error: questionError } =
       await supabase
-        .from("question")
+        .from("questions")
         .select("id")
         .eq("id", questionId)
         .single();

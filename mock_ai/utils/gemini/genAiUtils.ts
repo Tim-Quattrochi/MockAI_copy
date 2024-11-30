@@ -27,9 +27,9 @@ export async function generateTranscription(
     1. The full transcript of the interviewee's response as a string.
     2. An array of words with their metadata, including start and end times.
     3. A list of filler words ('um', 'uh', 'like', 'you know', 'so'), including their counts.
-    4. A count of pauses longer than 10 seconds, expressed as a string.
+    4. A count of pauses longer than 10 seconds, expressed as a number.
     5. Feedback on the technical response to the provided interview question.
-    6. An unbiased score  based on the technical quality of the response.
+    6. An unbiased score based on the technical quality of the response.
 
       You are assisting ${candidateName}, who is applying for the ${position} position at ${company}. Your goal is to provide constructive feedback to improve their ${questionType} skills based on their response to the question: "${question}."
 

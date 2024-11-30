@@ -35,8 +35,24 @@ export const schema = {
             description: "End time of the word in seconds.",
             nullable: false,
           },
+          confidence: {
+            type: SchemaType.NUMBER,
+            description: "Confidence score of the word recognition.",
+            nullable: false,
+          },
+          punctuated_word: {
+            type: SchemaType.STRING,
+            description: "The word with punctuation.",
+            nullable: false,
+          },
         },
-        required: ["word", "start", "end"],
+        required: [
+          "word",
+          "start",
+          "end",
+          "confidence",
+          "punctuated_word",
+        ],
       },
       nullable: false,
     },
@@ -61,36 +77,12 @@ export const schema = {
       },
       nullable: false,
     },
-    long_pauses: {
-      type: SchemaType.ARRAY,
-      description: "List of pauses longer than 10 seconds.",
-      items: {
-        type: SchemaType.OBJECT,
-        properties: {
-          start: {
-            type: SchemaType.NUMBER,
-            description: "Start time of the pause in seconds.",
-            nullable: false,
-          },
-          end: {
-            type: SchemaType.NUMBER,
-            description: "End time of the pause in seconds.",
-            nullable: false,
-          },
-          duration: {
-            type: SchemaType.NUMBER,
-            description: "Duration of the pause in seconds.",
-            nullable: false,
-          },
-        },
-        required: ["start", "end", "duration"],
-      },
-      nullable: false,
-    },
     pause_durations: {
-      type: SchemaType.STRING,
-      description:
-        "A string representing the count of pauses 10 seconds or greater.",
+      type: SchemaType.ARRAY,
+      items: {
+        type: SchemaType.NUMBER,
+      },
+      description: "Array of pause durations in seconds.",
       nullable: false,
     },
     ai_feedback: {
@@ -105,6 +97,21 @@ export const schema = {
         "The score assigned to the interviewee's response.",
       nullable: false,
     },
+    positive_sentiment_score: {
+      type: SchemaType.NUMBER,
+      description: "The positive sentiment score of the response.",
+      nullable: false,
+    },
+    negative_sentiment_score: {
+      type: SchemaType.NUMBER,
+      description: "The negative sentiment score of the response.",
+      nullable: false,
+    },
+    neutral_sentiment_score: {
+      type: SchemaType.NUMBER,
+      description: "The neutral sentiment score of the response.",
+      nullable: false,
+    },
   },
   required: [
     "transcript",
@@ -113,7 +120,9 @@ export const schema = {
     "filler_words",
     "pause_durations",
     "ai_feedback",
-    "long_pauses",
     "score",
+    "positive_sentiment_score",
+    "negative_sentiment_score",
+    "neutral_sentiment_score",
   ],
 };

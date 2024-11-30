@@ -8,13 +8,13 @@ export type Feedback = {
     um: number;
     "you know": number;
   };
-  long_pauses: number;
+  long_pause_count: number;
   pause_durations: number[];
 };
 
 export type Question = {
   id: string;
-  question: string;
+  question_text: string;
   name: string;
   company: string;
   position: string;
@@ -25,7 +25,7 @@ export type Question = {
 export type QuestionResponse = {
   question: {
     id: string;
-    question: string;
+    question_text: string;
     name: string;
     company: string;
     position: string;
@@ -36,17 +36,17 @@ export type QuestionResponse = {
 };
 
 export type Result = {
-  question: string;
+  user_id?: string;
   question_id: number;
   transcript: string;
   filler_words: string;
-  long_pauses: string;
   pause_durations: string;
   interview_date: string;
   ai_feedback?: string;
   audio_url?: string;
   video_url?: string;
   score?: number;
+  long_pause_count?: number;
 };
 
 export type InterviewData = {

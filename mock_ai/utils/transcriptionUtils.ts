@@ -20,7 +20,7 @@ export interface TranscriptionResponse {
   words: WordInfo[];
   filler_words: FillerWord[];
   long_pauses: LongPause[];
-  pause_durations: string;
+  pause_durations: number[];
   interviewer_question: string;
 }
 
@@ -33,7 +33,7 @@ export interface AnalysisResult {
   long_pauses: LongPause[];
   score: number;
   ai_feedback?: string;
-  pause_durations: string;
+  pause_durations: number[];
   interviewer_question?: string;
 }
 
@@ -48,7 +48,7 @@ export function calculateScore(
     return penalty + wordPenalty;
   }, 0);
 
-  const pausePenalty = response.long_pauses.reduce(
+  const pausePenalty = response.pause_durations.reduce(
     (penalty, pause) => {
       if (pause.duration > threshold) {
         return penalty + pause.duration;
@@ -83,7 +83,7 @@ export async function analyzeAudio(
     transcript,
     words,
     filler_words,
-    long_pauses,
+    pause_durations,
     interviewer_question,
   } = response;
 
@@ -102,11 +102,11 @@ export async function analyzeAudio(
     fillerWordCount[item.word] = item.count;
   });
 
-  const longPauseCount = (long_pauses || []).filter(
+  const longPauseCount = (pause_durations || []).filter(
     (pause) => pause.duration >= 10
   ).length;
 
-  const pauses = (long_pauses || []).map((pause) => {
+  const pauses = (pause_durations || []).map((pause) => {
     if (
       typeof pause.start !== "number" ||
       typeof pause.end !== "number" ||
@@ -121,7 +121,7 @@ export async function analyzeAudio(
     )} seconds`;
   });
 
-  const pauseDurations = (long_pauses || [])
+  const pauseDurations = (pause_duration || [])
     .filter((pause) => pause.duration >= 10)
     .map((pause) => `${pause.duration.toFixed(0)} seconds`)
     .join(", ");
@@ -132,7 +132,6 @@ export async function analyzeAudio(
     transcript: transcript || "",
     words: words || [],
     filler_words: filler_words || [],
-    long_pauses: long_pauses || [],
     pause_durations: pauseDurations || "",
     score: calculateScore(response, 10),
     interviewer_question: interviewer_question,

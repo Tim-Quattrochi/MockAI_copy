@@ -11,7 +11,7 @@ export async function saveQuestion(data: {
 }): Promise<Question> {
   const supabase = await supabasePromise;
   const { data: savedQuestion, error } = await supabase
-    .from("question")
+    .from("questions")
     .insert([
       {
         question: data.question,
@@ -33,7 +33,7 @@ export async function saveQuestion(data: {
 export async function getQuestions() {
   const supabase = await supabasePromise;
   const { data: questions, error } = await supabase
-    .from("question")
+    .from("questions")
     .select("*");
 
   if (error) {

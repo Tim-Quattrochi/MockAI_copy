@@ -65,7 +65,7 @@ const Interview = () => {
 
     router.push(
       `/results?question=${encodeURIComponent(
-        selectedQuestion.question
+        selectedQuestion.question_text
       )}&questionId=${encodeURIComponent(selectedQuestion.id)}`
     );
   };
@@ -301,7 +301,7 @@ const Interview = () => {
               }`}
             >
               <AnalysisCard
-                content={selectedQuestion.question}
+                content={selectedQuestion.question_text}
                 title="Interview Question Provided by mockAI"
                 type="question"
                 isLoading={isQuestionFetching}
@@ -309,7 +309,7 @@ const Interview = () => {
               {interviewData.recordingType === "audio" ? (
                 <VoiceRecorder
                   questionId={selectedQuestion.id}
-                  selectedQuestion={selectedQuestion.question}
+                  selectedQuestion={selectedQuestion.question_text}
                   user={user}
                   interviewData={interviewData}
                   onRecordingComplete={() => {
