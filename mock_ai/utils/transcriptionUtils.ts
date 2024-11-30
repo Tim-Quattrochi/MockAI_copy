@@ -127,13 +127,13 @@ export async function analyzeAudio(
     .join(", ");
 
   const result: AnalysisResult = {
-    fillerWordCount: fillerWordCount,
-    longPauses: pauses,
-    transcript: transcript,
-    words: words,
-    filler_words: filler_words,
-    long_pauses: long_pauses,
-    pause_durations: pauseDurations,
+    fillerWordCount: fillerWordCount || {},
+    longPauses: pauses || [],
+    transcript: transcript || "",
+    words: words || [],
+    filler_words: filler_words || [],
+    long_pauses: long_pauses || [],
+    pause_durations: pauseDurations || "",
     score: calculateScore(response, 10),
     interviewer_question: interviewer_question,
   };
