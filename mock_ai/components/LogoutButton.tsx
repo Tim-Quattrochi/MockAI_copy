@@ -17,19 +17,23 @@ export function LogoutButton({
 
   async function handleLogout() {
     await supabase.auth.signOut();
-    router.push("/signin");
+    router.push("/auth/signout");
     router.refresh();
   }
 
   return (
-    <Button
-      variant={variant}
-      size={size}
-      className={`text-[#ff6db3] border-[#ff6db3] hover:bg-[#e888b7] rounded-md px-3 py-2 transition-colors ${className}`}
-      onClick={handleLogout}
-      {...props}
-    >
-      Sign out
-    </Button>
+    <div>
+      <form action="/auth/signout" method="post">
+        <Button
+          variant={variant}
+          size={size}
+          className={`text-[#ff6db3] border-[#ff6db3] hover:bg-[#e888b7] rounded-md px-3 py-2 transition-colors ${className}`}
+          onClick={handleLogout}
+          {...props}
+        >
+          Sign out
+        </Button>
+      </form>
+    </div>
   );
 }
