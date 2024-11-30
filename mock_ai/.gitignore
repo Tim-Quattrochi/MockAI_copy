@@ -64,3 +64,7 @@ venv.bak/
 # Alembic
 alembic/versions/__pycache__/
 alembic/versions/*.pyc
+
+
+
+supabase/.temp/cli-latest
