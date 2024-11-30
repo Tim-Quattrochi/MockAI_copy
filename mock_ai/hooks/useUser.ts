@@ -4,7 +4,7 @@ import { AuthError, Session, User } from "@supabase/supabase-js";
 import { jwtDecode } from "jwt-decode";
 import type { JwtPayload } from "jwt-decode";
 
-import { createClient } from "../utils/supabase/client";
+import { createClient } from "@/supabase/client";
 
 type SupabaseJwtPayload = JwtPayload & {
   app_metadata: {
