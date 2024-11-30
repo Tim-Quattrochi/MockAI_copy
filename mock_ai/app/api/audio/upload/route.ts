@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import path from "path";
+import {
+  GoogleAIFileManager,
+  FileState,
+} from "@google/generative-ai/server";
 import fs, { access } from "fs/promises";
 import { writeFileSync } from "fs";
 
@@ -26,9 +30,12 @@ export async function POST(
     const file = formData.get("file") as File;
     const fileName = formData.get("fileName") as string;
     const questionId = formData.get("questionId") as string;
-    const user = formData.get("user") as string;
+    const userEmail = formData.get("user") as string;
     const question = formData.get("question") as string;
     const name = formData.get("name") as string;
+    const company = formData.get("company") as string;
+    const position = formData.get("position") as string;
+    const questionType = formData.get("questionType") as string;
 
     const filePath = `${authedUser.id}/${fileName}`;
 
@@ -97,6 +104,54 @@ export async function POST(
 
     writeFileSync(tmpPath, buffer);
 
+    // upload to Googles AI file manager
+    const fileManager = new GoogleAIFileManager(
+      process.env.GEMINI_API_KEY!
+    );
+
+    // function to upload and process the file
+    async function uploadAndProcessFile(
+      fileManager: GoogleAIFileManager,
+      videoFilePath: string,
+      mimeType: string
+    ) {
+      const uploadResult = await fileManager.uploadFile(
+        videoFilePath,
+        {
+          mimeType,
+          displayName: videoFilePath.split("/").pop(),
+        }
+      );
+
+      console.log(
+        "upload result from file manager utils: ",
+        uploadResult
+      );
+
+      let file = await fileManager.getFile(uploadResult.file.name);
+      while (file.state === FileState.PROCESSING) {
+        process.stdout.write(".");
+        await new Promise((resolve) => setTimeout(resolve, 10_000));
+        file = await fileManager.getFile(uploadResult.file.name);
+      }
+
+      console.log(
+        `Uploaded file ${uploadResult.file.displayName} as: ${uploadResult.file.uri}`
+      );
+
+      if (file.state === FileState.FAILED) {
+        throw new Error("Audio processing failed.");
+      }
+
+      return uploadResult;
+    }
+
+    const genaiUploadedFile = await uploadAndProcessFile(
+      fileManager,
+      tmpPath,
+      mimeType
+    );
+
     const transcriptionResponse = await fetch(
       `${process.env.NEXT_PUBLIC_APP_URL}/api/audio/transcribe`,
       {
@@ -105,11 +160,16 @@ export async function POST(
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          mimeType: mimeType,
-          videoFilePath: tmpPath,
+          mimeType: genaiUploadedFile.file.mimeType,
+          fileUri: genaiUploadedFile.file.uri,
           user: authedUser,
           questionId: questionId,
           question: question,
+          userEmail: userEmail,
+          company: company,
+          position: position,
+          questionType: questionType,
+          name: name,
         }),
       }
     );

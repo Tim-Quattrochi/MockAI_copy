@@ -4,6 +4,7 @@ import { schema as genAiResultsSchema } from "@/utils/gemini/transcriptionSchema
 export async function generateTranscription(
   genAI: GoogleGenerativeAI,
   fileUri: string,
+  mimeType: string,
   candidateName: string,
   position: string,
   company: string,
@@ -38,7 +39,7 @@ export async function generateTranscription(
     {
       fileData: {
         fileUri: fileUri,
-        mimeType: fileUri.file.mimeType,
+        mimeType: mimeType,
       },
     },
   ]);
