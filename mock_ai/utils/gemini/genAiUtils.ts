@@ -15,28 +15,26 @@ export async function generateTranscription(
   const model = genAI.getGenerativeModel({
     model: "gemini-1.5-flash",
     generationConfig: {
+      temperature: 0.6,
+      topP: 0.95,
+      topK: 40,
+      maxOutputTokens: 8192,
       responseMimeType: "application/json",
       responseSchema: genAiResultsSchema,
     },
-    systemInstruction:
-      "You are an advanced transcription and analysis AI. Your task is to analyze audio input and return results in the specified JSON schema.",
+    systemInstruction: process.env.SYSTEM_INSTRUCTIONS!,
   });
 
+  const promptTemplate = process.env.PROMPT_TEMPLATE!;
+  const prompt = promptTemplate
+    .replace("${candidateName}", candidateName)
+    .replace("${position}", position)
+    .replace("${company}", company)
+    .replace("${questionType}", questionType)
+    .replace("${question}", question);
+
   const result = await model.generateContent([
-    `Please transcribe the provided audio input and return the following:
-    1. The full transcript of the interviewee's response as a string.
-    2. An array of words with their metadata, including start and end times.
-    3. A list of filler words ('um', 'uh', 'like', 'you know', 'so'), including their counts.
-    4. A count of pauses longer than 10 seconds, expressed as a number.
-    5. Feedback on the technical response to the provided interview question.
-    6. An unbiased score based on the technical quality of the response.
-
-      You are assisting ${candidateName}, who is applying for the ${position} position at ${company}. Your goal is to provide constructive feedback to improve their ${questionType} skills based on their response to the question: "${question}."
-
-    Be concise but helpful, focusing on areas for improvement. Conclude with the following:
-      - The technical score in the format: 'Here is your score based on our assessment: [score].'
-      - Thank ${candidateName} for their response and encourage them to return to MockAI for further practice.
-    DO NOT include any markdown in your response.`,
+    prompt,
     {
       fileData: {
         fileUri: fileUri,
@@ -46,5 +44,5 @@ export async function generateTranscription(
   ]);
 
   const responseText = await result.response.text();
-  return JSON.parse(responseText);
+  return responseText;
 }

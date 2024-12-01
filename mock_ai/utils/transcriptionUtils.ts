@@ -2,6 +2,9 @@ export interface WordInfo {
   word: string;
   start: number;
   end: number;
+  positive_sentiment_score?: number;
+  negative_sentiment_score?: number;
+  neutral_sentiment_score?: number;
 }
 
 export interface FillerWord {
@@ -38,38 +41,26 @@ export interface AnalysisResult {
 }
 
 export function calculateScore(
-  response: TranscriptionResponse,
-  threshold: number
+  {
+    fillerWordCount,
+    longPauseCount,
+    positive_sentiment_score,
+    negative_sentiment_score,
+    neutral_sentiment_score,
+  },
+  baseScore
 ): number {
-  const fillerWords = response.filler_words || [];
-
-  const fillerWordPenalty = fillerWords.reduce((penalty, word) => {
-    const wordPenalty = word.count > 0 ? word.count : 0;
-    return penalty + wordPenalty;
-  }, 0);
-
-  const pausePenalty = response.pause_durations.reduce(
-    (penalty, pause) => {
-      if (pause.duration > threshold) {
-        return penalty + pause.duration;
-      }
-      return penalty;
-    },
+  const fillerWordPenalty = Object.values(fillerWordCount).reduce(
+    (acc, count) => acc + count,
     0
   );
+  const pausePenalty = longPauseCount;
+  const sentimentScore =
+    positive_sentiment_score - negative_sentiment_score;
 
-  const wordCount = response.words.length;
-  const fluencyBonus = wordCount * 0.1;
-
-  // Total score
-  const score =
-    100 -
-    fillerWordPenalty -
-    pausePenalty +
-    fluencyBonus +
-    Math.random() * 10;
-
-  return Math.max(score, 0);
+  return (
+    baseScore - fillerWordPenalty - pausePenalty + sentimentScore
+  );
 }
 
 export async function analyzeAudio(
@@ -85,17 +76,10 @@ export async function analyzeAudio(
     filler_words,
     pause_durations,
     interviewer_question,
+    positive_sentiment_score,
+    negative_sentiment_score,
+    neutral_sentiment_score,
   } = response;
-
-  const detailedTranscript = words
-    .map((wordInfo) => {
-      if (!wordInfo.word || typeof wordInfo.start !== "number") {
-        throw new Error("Invalid word data");
-      }
-      const startTime = wordInfo.start.toFixed(2);
-      return `[${startTime}] ${wordInfo.word}`;
-    })
-    .join(" ");
 
   const fillerWordCount = {};
   filler_words.forEach((item) => {
@@ -107,33 +91,36 @@ export async function analyzeAudio(
   ).length;
 
   const pauses = (pause_durations || []).map((pause) => {
-    if (
-      typeof pause.start !== "number" ||
-      typeof pause.end !== "number" ||
-      typeof pause.duration !== "number"
-    ) {
+    if (typeof pause !== "number") {
       throw new Error("Invalid pause data");
     }
-    const start = pause.start.toFixed(2);
-    const end = pause.end.toFixed(2);
-    return `Between [${start}] and [${end}]: ${pause.duration.toFixed(
-      2
-    )} seconds`;
+    return `${pause.toFixed(2)} seconds`;
   });
 
-  const pauseDurations = (pause_duration || [])
-    .filter((pause) => pause.duration >= 10)
-    .map((pause) => `${pause.duration.toFixed(0)} seconds`)
+  const pauseDurations = (pause_durations || [])
+    .filter((pause) => pause >= 10)
+    .map((pause) => `${pause.toFixed(0)} seconds`)
     .join(", ");
+
+  const score = calculateScore(
+    {
+      fillerWordCount,
+      longPauseCount,
+      positive_sentiment_score,
+      negative_sentiment_score,
+      neutral_sentiment_score,
+    },
+    10
+  );
 
   const result: AnalysisResult = {
     fillerWordCount: fillerWordCount || {},
-    longPauses: pauses || [],
     transcript: transcript || "",
     words: words || [],
     filler_words: filler_words || [],
-    pause_durations: pauseDurations || "",
-    score: calculateScore(response, 10),
+    pause_durations:
+      pause_durations.map((pause) => Math.round(pause)) || [],
+    score: score,
     interviewer_question: interviewer_question,
   };
 

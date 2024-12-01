@@ -43,7 +43,7 @@ const Results = () => {
 
   const supabase = createClient();
 
-  const { email } = user;
+  const { email } = user ?? {};
 
   const router = useRouter();
 
@@ -58,7 +58,7 @@ const Results = () => {
     try {
       const results = await getResultByQuestionId(questionId);
 
-      setResults([results]);
+      setResults(results);
     } catch (error) {
       console.error("Error fetching results:", error);
     } finally {
@@ -95,8 +95,6 @@ const Results = () => {
         })),
       };
 
-      console.log("Saving results payload:", payload);
-
       try {
         await axios.post("/service/save_results", payload);
         toast({
@@ -123,6 +121,8 @@ const Results = () => {
     router.refresh();
   };
 
+  // TODO: show score.
+
   return (
     <div className="min-h-screen bg-[#050614] text-white p-6">
       <h1 className="text-3xl font-bold mb-6 text-center">
@@ -136,42 +136,37 @@ const Results = () => {
             <Skeleton className="h-4 w-3/4" />
           </CardContent>
         </Card>
-      ) : results.length > 0 ? (
-        results.map((result, index) => (
-          <Card
-            key={index}
-            className="bg-[#0a0b24] border-[#2e2f61] mb-6"
-          >
-            <CardHeader>
-              <CardTitle className="flex text-[#7fceff] mx-auto">
-                Report
-                <ClipboardPenLine className="ml-4 h-6 w-6 text-[#5fbfd7]" />
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                <div className="bg-[#1a1c3d] rounded-lg p-6 border-b border-[#2e2f61]">
-                  <h3 className="text-xl font-bold text-[#7fceff] mb-2">
-                    Question
-                  </h3>
-                  <p className="text-[#f0f0f0]">{question}</p>
-                </div>
+      ) : results ? (
+        <Card className="bg-[#0a0b24] border-[#2e2f61] mb-6">
+          <CardHeader>
+            <CardTitle className="flex text-[#7fceff] mx-auto">
+              Report
+              <ClipboardPenLine className="ml-4 h-6 w-6 text-[#5fbfd7]" />
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              <div className="bg-[#1a1c3d] rounded-lg p-6 border-b border-[#2e2f61]">
+                <h3 className="text-xl font-bold text-[#7fceff] mb-2">
+                  Question
+                </h3>
+                <p className="text-[#f0f0f0]">{question}</p>
+              </div>
 
-                <div className="bg-[#1a1c3d] rounded-lg p-6 border-b border-[#2e2f61]">
-                  <h3 className="text-xl font-bold text-[#7fceff] mb-2">
-                    Transcript
-                  </h3>
-                  <p className="text-[#f0f0f0]">
-                    {result.transcript}
-                  </p>
-                </div>
+              <div className="bg-[#1a1c3d] rounded-lg p-6 border-b border-[#2e2f61]">
+                <h3 className="text-xl font-bold text-[#7fceff] mb-2">
+                  Transcript
+                </h3>
+                <p className="text-[#f0f0f0]">{results.transcript}</p>
+              </div>
 
-                <div className="bg-[#131538] rounded-lg p-6 transition-all hover:shadow-lg hover:shadow-[#7fceff]/20 border-b border-[#2e2f61]">
-                  <h3 className="text-xl font-bold text-[#7fceff] mb-2">
-                    Filler Words
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {result.filler_words.map((item, index) => (
+              <div className="bg-[#131538] rounded-lg p-6 transition-all hover:shadow-lg hover:shadow-[#7fceff]/20 border-b border-[#2e2f61]">
+                <h3 className="text-xl font-bold text-[#7fceff] mb-2">
+                  Filler Words
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {results.filler_words &&
+                    results?.filler_words.map((item, index) => (
                       <div
                         key={index}
                         className="bg-[#202341] rounded-lg p-4 flex justify-between items-center transition-all hover:shadow-lg hover:shadow-[#7fceff]/20"
@@ -197,57 +192,55 @@ const Results = () => {
                         />
                       </div>
                     ))}
-                  </div>
-                </div>
-
-                <div className="bg-[#1a1c3d] rounded-lg p-6 border-b border-[#2e2f61]">
-                  <h3 className="text-xl font-bold text-[#7fceff] mb-2">
-                    Long Pauses
-                  </h3>
-                  <p className="text-[#f0f0f0]">
-                    {!result.long_pauses.length ? (
-                      "No long pauses detected."
-                    ) : (
-                      <span>
-                        {result.long_pauses.length} long pauses
-                        detected.
-                      </span>
-                    )}
-                  </p>
-                </div>
-
-                <div className="bg-[#1a1c3d] rounded-lg p-6 border-b border-[#2e2f61]">
-                  <h3 className="text-xl font-bold text-[#7fceff] mb-2">
-                    Pause Durations
-                  </h3>
-                  <p className="text-[#f0f0f0]">
-                    {result.pause_durations === "" ||
-                    result.pause_durations === 0 ? (
-                      "Fantastic work! You had no pauses longer than 10 seconds. Long pauses during interviews can sometimes convey hesitation or lack of preparation, and they might make the interviewer question your confidence. By keeping your responses fluid, you demonstrated a clear, composed, and thoughtful communication style."
-                    ) : (
-                      <span>
-                        {result.pause_durations} pauses of 10 seconds
-                        or more detected. Consider practicing how to
-                        gather your thoughts quickly to maintain the
-                        flow of conversation and confidence in your
-                        responses.
-                      </span>
-                    )}
-                  </p>
-                </div>
-
-                <div className="bg-[#1a1c3d] rounded-lg p-6">
-                  <h3 className="text-xl font-bold text-[#7fceff] mb-2">
-                    Interview Date
-                  </h3>
-                  <p className="text-[#f0f0f0]">
-                    {result.interview_date}
-                  </p>
+                  {!results.filler_words.length && (
+                    <p className="text-[#f0f0f0]">
+                      No filler words detected. Great job!
+                    </p>
+                  )}
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        ))
+
+              <div className="bg-[#1a1c3d] rounded-lg p-6 border-b border-[#2e2f61]">
+                <h3 className="text-xl font-bold text-[#7fceff] mb-2">
+                  Long Pauses
+                </h3>
+                <p className="text-[#f0f0f0]">
+                  <span>
+                    {results.long_pause_count} long pauses detected.
+                  </span>
+                </p>
+              </div>
+
+              <div className="bg-[#1a1c3d] rounded-lg p-6 border-b border-[#2e2f61]">
+                <h3 className="text-xl font-bold text-[#7fceff] mb-2">
+                  Pause Durations
+                </h3>
+                <p className="text-[#f0f0f0]">
+                  {!results.pause_durations.length ? (
+                    "Fantastic work! You had no pauses longer than 10 seconds. Long pauses during interviews can sometimes convey hesitation or lack of preparation, and they might make the interviewer question your confidence. By keeping your responses fluid, you demonstrated a clear, composed, and thoughtful communication style."
+                  ) : (
+                    <span>
+                      {results.pause_durations} pauses of 10 seconds
+                      or more detected. Consider practicing how to
+                      gather your thoughts quickly to maintain the
+                      flow of conversation and confidence in your
+                      responses.
+                    </span>
+                  )}
+                </p>
+              </div>
+
+              <div className="bg-[#1a1c3d] rounded-lg p-6">
+                <h3 className="text-xl font-bold text-[#7fceff] mb-2">
+                  Interview Date
+                </h3>
+                <p className="text-[#f0f0f0]">
+                  {results.interview_date}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       ) : (
         <Card className="bg-[#0a0b24] border-[#2e2f61] mb-6">
           <CardContent>
@@ -279,7 +272,7 @@ const Results = () => {
       <AnalysisCard
         title="Mock AI Analysis"
         type="analysis"
-        content={results[0]?.ai_feedback}
+        content={results.ai_feedback}
         isLoading={analysisLoading}
         hasError={analysisError}
         handleRetry={() => fetchAIAnalysis(results)}

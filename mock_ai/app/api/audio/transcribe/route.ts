@@ -52,9 +52,9 @@ export async function POST(
       .from("results")
       .update({
         transcript: analysis.transcript,
-        filler_words: JSON.stringify(analysis.filler_words),
-        long_pauses: JSON.stringify(analysis.long_pauses),
-        pause_durations: jsonResponse.pause_durations,
+        filler_words: analysis.filler_words,
+        long_pause_count: analysis.long_pauses,
+        pause_durations: analysis.pause_durations,
         ai_feedback: jsonResponse.ai_feedback,
         score: analysis.score,
       })

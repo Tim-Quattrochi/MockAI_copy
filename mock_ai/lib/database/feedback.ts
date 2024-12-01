@@ -19,8 +19,9 @@ export const getResultByQuestionId = async (
   const serializedResult = {
     ...result,
     filler_words: JSON.parse(result.filler_words),
-    long_pauses: JSON.parse(result.long_pauses),
+    long_pause_count: result.long_pause_count,
     interview_date: new Date(result.interview_date).toLocaleString(),
+    score: result.score,
   };
 
   return serializedResult;
