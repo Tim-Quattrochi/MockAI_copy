@@ -10,7 +10,7 @@ import { Button } from "./ui/Button";
 
 interface QuestionProps {
   title: string;
-  content: Question["question"];
+  content: Question["question_text"];
   type: "question";
   isLoading?: boolean;
   handleRetry?: () => Promise<void>;
@@ -20,7 +20,7 @@ interface QuestionProps {
 
 interface AnalysisProps {
   title: string;
-  content: Result[];
+  content: Result["ai_feedback"];
   type: "analysis";
   isLoading?: boolean;
   hasError?: boolean;

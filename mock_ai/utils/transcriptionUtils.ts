@@ -2,6 +2,8 @@ export interface WordInfo {
   word: string;
   start: number;
   end: number;
+  confidence?: number;
+  punctuated_word?: string;
   positive_sentiment_score?: number;
   negative_sentiment_score?: number;
   neutral_sentiment_score?: number;
@@ -25,6 +27,10 @@ export interface TranscriptionResponse {
   long_pauses: LongPause[];
   pause_durations: number[];
   interviewer_question: string;
+  positive_sentiment_score: number;
+  negative_sentiment_score: number;
+  neutral_sentiment_score: number;
+  ai_feedback: string;
 }
 
 export interface AnalysisResult {
@@ -82,7 +88,7 @@ export async function analyzeAudio(
   } = response;
 
   const fillerWordCount = {};
-  filler_words.forEach((item) => {
+  response?.filler_words.forEach((item) => {
     fillerWordCount[item.word] = item.count;
   });
 
@@ -118,10 +124,10 @@ export async function analyzeAudio(
     transcript: transcript || "",
     words: words || [],
     filler_words: filler_words || [],
-    pause_durations:
-      pause_durations.map((pause) => Math.round(pause)) || [],
+    pause_durations: pause_durations || [],
     score: score,
     interviewer_question: interviewer_question,
+    ai_feedback: response.ai_feedback,
   };
 
   return result;

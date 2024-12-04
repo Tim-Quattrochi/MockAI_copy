@@ -1,4 +1,5 @@
 import { createClient } from "@/supabase/client";
+import { type Result } from "@/types";
 
 const supabase = createClient();
 
@@ -18,7 +19,7 @@ export const getResultByQuestionId = async (
 
   const serializedResult = {
     ...result,
-    filler_words: JSON.parse(result.filler_words),
+    filler_words: result.filler_words,
     long_pause_count: result.long_pause_count,
     interview_date: new Date(result.interview_date).toLocaleString(),
     score: result.score,

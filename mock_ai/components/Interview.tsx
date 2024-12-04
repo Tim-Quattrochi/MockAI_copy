@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useUser } from "@/hooks/useUser";
 import { useRouter } from "next/navigation";
 import axios from "axios";
@@ -47,6 +47,8 @@ const Interview = () => {
     null
   );
 
+  const nameRef = useRef<HTMLInputElement>(null);
+
   const initialData: InterviewData = {
     name: "",
     company: "",
@@ -59,6 +61,17 @@ const Interview = () => {
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 
   const router = useRouter();
+
+  useEffect(() => {
+    if (user && nameRef.current) {
+      nameRef.current.value =
+        user.user_metadata.name || user.user_metadata.full_name || "";
+      setInterviewData((prevData) => ({
+        ...prevData,
+        name: nameRef.current?.value || "",
+      }));
+    }
+  }, [user]);
 
   const handleNavigateToResults = () => {
     if (!selectedQuestion) return;
@@ -155,18 +168,25 @@ const Interview = () => {
                 !stepVisible ? "opacity-0" : "opacity-100"
               }`}
             >
-              <div className="space-y-2">
+              <div className="space-y-2 text-white">
                 <Label htmlFor="name">Your Name</Label>
                 <Input
                   id="name"
                   name="name"
+                  ref={nameRef}
                   value={interviewData.name}
                   onChange={handleInputChange}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === "Return") {
+                      handleNextStep();
+                    }
+                  }}
                   className="bg-primary-blue-100 text-black-100"
                 />
               </div>
               <Button
                 onClick={handleNextStep}
+                tabIndex={0}
                 className="w-full bg-primary-blue text-primary-blue-100 hover:bg-secondary-orange"
               >
                 Next <ArrowRight className="ml-2 h-4 w-4" />
@@ -187,6 +207,11 @@ const Interview = () => {
                   name="company"
                   value={interviewData.company}
                   onChange={handleInputChange}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === "Return") {
+                      handleNextStep();
+                    }
+                  }}
                   className="bg-primary-blue-100 text-black-100"
                 />
               </div>
@@ -212,6 +237,11 @@ const Interview = () => {
                   name="position"
                   value={interviewData.position}
                   onChange={handleInputChange}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === "Return") {
+                      handleNextStep();
+                    }
+                  }}
                   className="bg-primary-blue-100 text-black-100"
                 />
               </div>
@@ -255,6 +285,8 @@ const Interview = () => {
               <Button
                 onClick={handleNextStep}
                 className="w-full bg-primary-blue text-primary-blue-100 hover:bg-secondary-orange z-20 mt-2"
+                tabIndex={1}
+                onKeyDown={handleNextStep}
               >
                 Next <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
@@ -288,6 +320,8 @@ const Interview = () => {
               <Button
                 onClick={handleNextStep}
                 className="w-full bg-primary-blue text-primary-blue-100 hover:bg-secondary-orange"
+                tabIndex={1}
+                onKeyDown={handleNextStep}
               >
                 Start Interview
               </Button>

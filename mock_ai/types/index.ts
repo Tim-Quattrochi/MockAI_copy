@@ -1,4 +1,5 @@
 import { InterviewResult } from "@/components/UserAccount";
+import { FillerWord } from "@/utils/transcriptionUtils";
 
 export type Feedback = {
   filler_word_count: {
@@ -39,7 +40,7 @@ export type Result = {
   user_id?: string;
   question_id: number;
   transcript: string;
-  filler_words: string;
+  filler_words: FillerWord[];
   pause_durations: string;
   interview_date: string;
   ai_feedback?: string;

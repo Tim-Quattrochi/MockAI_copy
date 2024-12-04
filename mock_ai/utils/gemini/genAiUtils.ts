@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { schema as genAiResultsSchema } from "@/utils/gemini/transcriptionSchema";
 import { createClient } from "@/supabase/server";
+import { TranscriptionResponse } from "../transcriptionUtils";
 
 export async function generateTranscription(
   genAI: GoogleGenerativeAI,
@@ -11,7 +12,7 @@ export async function generateTranscription(
   company: string,
   questionType: string,
   question: string
-) {
+): Promise<TranscriptionResponse> {
   const model = genAI.getGenerativeModel({
     model: "gemini-1.5-flash",
     generationConfig: {
@@ -44,5 +45,7 @@ export async function generateTranscription(
   ]);
 
   const responseText = await result.response.text();
-  return responseText;
+  const transcriptionResponse: TranscriptionResponse =
+    JSON.parse(responseText);
+  return transcriptionResponse;
 }

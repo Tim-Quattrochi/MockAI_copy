@@ -27,7 +27,7 @@ import { LogoutButton } from "./LogoutButton";
 
 const Results = () => {
   const { user, revalidate } = useUser();
-  const [results, setResults] = useState<Result[]>([]);
+  const [results, setResults] = useState<Result | null>(null);
   const [saveResults, setSaveResults] = useState(false);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [resultsLoading, setResultsLoading] = useState(true);
@@ -53,10 +53,10 @@ const Results = () => {
     }
   }, [questionId]);
 
-  const fetchResults = async (qid) => {
+  const fetchResults = async (qid: string) => {
     setResultsLoading(true);
     try {
-      const results = await getResultByQuestionId(questionId);
+      const results = await getResultByQuestionId(qid);
 
       setResults(results);
     } catch (error) {
@@ -181,18 +181,17 @@ const Results = () => {
                           value={
                             (item.count /
                               Math.max(
-                                ...result.filler_words.map(
+                                ...results.filler_words.map(
                                   (fw) => fw.count
                                 )
                               )) *
                             100
                           }
                           className="w-full h-2 bg-[#2e2f61] ml-2"
-                          indicatorClassName="bg-gradient-to-r from-[#7fceff] to-[#ff6db3]"
                         />
                       </div>
                     ))}
-                  {!results.filler_words.length && (
+                  {!results?.filler_words.length && (
                     <p className="text-[#f0f0f0]">
                       No filler words detected. Great job!
                     </p>
@@ -272,10 +271,12 @@ const Results = () => {
       <AnalysisCard
         title="Mock AI Analysis"
         type="analysis"
-        content={results.ai_feedback}
+        content={results?.ai_feedback || ""}
         isLoading={analysisLoading}
         hasError={analysisError}
-        handleRetry={() => fetchAIAnalysis(results)}
+        handleRetry={() =>
+          questionId ? fetchResults(questionId) : Promise.resolve()
+        }
       />
 
       {/* Hide the save results checkbox and button when the results are already saved.*/}
@@ -305,7 +306,7 @@ const Results = () => {
       )}
 
       <div className="flex justify-between">
-        {results.length > 0 && (
+        {results && (
           <div className="flex justify-between">
             <Button
               onClick={handleStartNewInterview}

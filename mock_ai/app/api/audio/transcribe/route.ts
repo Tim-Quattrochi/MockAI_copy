@@ -51,10 +51,9 @@ export async function POST(
     const { data: resultData, error: resultError } = await supabase
       .from("results")
       .update({
-        transcript: analysis.transcript,
-        filler_words: analysis.filler_words,
-        long_pause_count: analysis.long_pauses,
-        pause_durations: analysis.pause_durations,
+        transcript: jsonResponse.transcript,
+        filler_words: jsonResponse.filler_words,
+        pause_durations: jsonResponse.pause_durations,
         ai_feedback: jsonResponse.ai_feedback,
         score: analysis.score,
       })

@@ -201,6 +201,10 @@
   * {
     @apply border-border;
   }
+  label,
+  h3 {
+    @apply text-label;
+  }
   body {
     @apply bg-background text-foreground;
   }
