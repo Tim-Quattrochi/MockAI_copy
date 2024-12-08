@@ -1,16 +1,18 @@
 "use client";
 
 import React, { useEffect, useState, Suspense } from "react";
-import axios from "axios";
-import { useUser } from "@/hooks/useUser";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/supabase/client";
 import { Button } from "./ui/Button";
 import { getResultByQuestionId } from "@/lib/database/feedback";
 import { Progress } from "./ui/progress";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "./ui/hover-card";
 import { useRouter } from "next/navigation";
 import { Info, ClipboardPenLine } from "lucide-react";
-import { useToast } from "@/hooks/useToast";
 import { Result } from "@/types";
 
 import {
@@ -19,19 +21,16 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Checkbox } from "./ui/checkbox";
 import { Skeleton } from "./ui/skeleton";
-import { Save, LogOut, Play } from "lucide-react";
+import { Play } from "lucide-react";
 import AnalysisCard from "./AnalysisCard";
 import { LogoutButton } from "./LogoutButton";
+import { cn } from "@/lib/utils";
 
 const Results = () => {
-  const { user, revalidate } = useUser();
   const [results, setResults] = useState<Result | null>(null);
-  const [saveResults, setSaveResults] = useState(false);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [resultsLoading, setResultsLoading] = useState(true);
-  const [resultsSaved, setResultsSaved] = useState(false);
   const [analysisError, setAnalysisError] = useState(false);
 
   const searchParams = useSearchParams();
@@ -39,11 +38,7 @@ const Results = () => {
   const question = searchParams.get("question");
   const questionId = searchParams.get("questionId");
 
-  const { toast } = useToast();
-
   const supabase = createClient();
-
-  const { email } = user ?? {};
 
   const router = useRouter();
 
@@ -66,62 +61,24 @@ const Results = () => {
     }
   };
 
-  const handleSaveToggle = () => {
-    setSaveResults(!saveResults);
-  };
-
-  const handleSaveResults = async () => {
-    if (results?.length === 0) {
-      toast({
-        variant: "destructive",
-        title: "Uh oh! Something went wrong..",
-        description: "There was a problem saving your results.",
-      });
-      return;
-    }
-
-    if (saveResults) {
-      const payload = {
-        user: email,
-        results: results.map((result) => ({
-          question_id: result.question_id,
-          question: result.question,
-          transcript: result.transcript,
-          score: result.score,
-          filler_word_count: result.filler_words,
-          long_pauses: result.long_pauses,
-          pause_durations: result.pause_durations,
-          ai_feedback: result.ai_feedback || "",
-        })),
-      };
-
-      try {
-        await axios.post("/service/save_results", payload);
-        toast({
-          variant: "success",
-          title: "Saved",
-          description: "Your results have been saved successfully.",
-        });
-        setResultsSaved(true);
-      } catch (error) {
-        console.error("Error saving results:", error);
-      }
-    } else {
-      console.log("Save results is not enabled.");
-    }
-  };
-
   const handleStartNewInterview = () => {
     router.push("/interview");
   };
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    router.push("/auth/signin");
-    router.refresh();
-  };
-
   // TODO: show score.
+  const getScoreStyles = (score: number) => {
+    return cn(
+      "bg-[#1a1c3d] rounded-full p-8 cursor-pointer border transition-colors",
+
+      {
+        "border-[#7fceff] text-[#7fceff]": score >= 90,
+        "border-chart-2 text-chart-2": score >= 70 && score < 90,
+        "border-secondary-orange text-secondary-orange":
+          score >= 50 && score < 70,
+        "border-destructive text-destructive": score < 50,
+      }
+    );
+  };
 
   return (
     <div className="min-h-screen bg-[#050614] text-white p-6">
@@ -139,10 +96,35 @@ const Results = () => {
       ) : results ? (
         <Card className="bg-[#0a0b24] border-[#2e2f61] mb-6">
           <CardHeader>
-            <CardTitle className="flex text-[#7fceff] mx-auto">
+            <CardTitle className="flex text-[#7fceff] mx-auto my-6">
               Report
               <ClipboardPenLine className="ml-4 h-6 w-6 text-[#5fbfd7]" />
             </CardTitle>
+            <div className="flex justify-center my-6">
+              <HoverCard>
+                <HoverCardTrigger asChild>
+                  <div
+                    className={getScoreStyles(results?.score || 0)}
+                  >
+                    <span className="text-4xl font-bold">
+                      {results?.score}%
+                    </span>
+                  </div>
+                </HoverCardTrigger>
+                <HoverCardContent className="w-80 bg-[#0a0b24] border-[#2e2f61]">
+                  <div className="flex flex-col gap-2">
+                    <h4 className="text-[#7fceff] font-semibold">
+                      Interview Score
+                    </h4>
+                    <p className="text-[#f0f0f0] text-sm">
+                      This score reflects your overall interview
+                      performance based on clarity, confidence, and
+                      content delivery.
+                    </p>
+                  </div>
+                </HoverCardContent>
+              </HoverCard>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
@@ -278,32 +260,6 @@ const Results = () => {
           questionId ? fetchResults(questionId) : Promise.resolve()
         }
       />
-
-      {/* Hide the save results checkbox and button when the results are already saved.*/}
-      {!resultsSaved && (
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="saveResults"
-              checked={saveResults}
-              onCheckedChange={handleSaveToggle}
-            />
-            <label
-              htmlFor="saveResults"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-            >
-              Save Results
-            </label>
-          </div>
-          <Button
-            onClick={handleSaveResults}
-            className="bg-[#7fceff] text-[#050614] hover:bg-[#7fceff]/90"
-            disabled={!saveResults}
-          >
-            <Save className="mr-2 h-4 w-4" /> Save Results
-          </Button>
-        </div>
-      )}
 
       <div className="flex justify-between">
         {results && (
