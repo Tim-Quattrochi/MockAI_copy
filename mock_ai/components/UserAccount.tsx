@@ -4,7 +4,7 @@ import axios from "axios";
 import Link from "next/link";
 
 // Hooks
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useToast } from "@/hooks/useToast";
 
 // UI components
@@ -93,9 +93,6 @@ export default function UserAccountClient({
   user,
 }: UserAccountClientProps) {
   const [results, setResults] = useState<JoinedInterviewResult[]>([]);
-  const [filteredResults, setFilteredResults] = useState<
-    JoinedInterviewResult[]
-  >([]);
   const [sortBy, setSortBy] = useState<"asc" | "desc">("desc");
   const [loading, setLoading] = useState(true);
   const [expandedFeedbackId, setExpandedFeedbackId] = useState<
@@ -112,15 +109,44 @@ export default function UserAccountClient({
   const {
     id: userId,
     email,
-    user_metadata: { name, picture, fullname },
+    user_metadata: { name, avatar_url: picture, fullname },
   } = user;
 
   const { toast, dismiss } = useToast();
 
-  const paginatedResults = filteredResults.slice(
-    (currentPage - 1) * resultsPerPage,
-    currentPage * resultsPerPage
-  );
+  const filteredResults = useMemo(() => {
+    let filtered = [...fullUserHistory];
+
+    if (filter !== "all") {
+      if (filter === "video") {
+        filtered = filtered.filter((result) => result.video_url);
+      } else if (filter === "voice") {
+        filtered = filtered.filter((result) => result.audio_url);
+      } else {
+        filtered = filtered.filter(
+          (result) => result.interview_type === filter
+        );
+      }
+    }
+
+    filtered.sort((a, b) => {
+      const dateA = new Date(a.interview_date);
+      const dateB = new Date(b.interview_date);
+      return sortBy === "asc"
+        ? dateA.getTime() - dateB.getTime()
+        : dateB.getTime() - dateA.getTime();
+    });
+
+    return filtered;
+  }, [fullUserHistory, filter, sortBy]);
+
+  const paginatedResults = useMemo(() => {
+    const startIndex = (currentPage - 1) * resultsPerPage;
+    return filteredResults.slice(
+      startIndex,
+      startIndex + resultsPerPage
+    );
+  }, [filteredResults, currentPage, resultsPerPage]);
 
   const totalPages = Math.ceil(
     filteredResults.length / resultsPerPage
@@ -153,62 +179,13 @@ export default function UserAccountClient({
     if (userId && !userError) {
       setLoading(false);
       setResults(fullUserHistory);
-      setFilteredResults(fullUserHistory);
       setUserLoading(false);
     }
     setUserLoading(false);
   }, [userId]);
 
-  useEffect(() => {
-    const filtered = results.filter(
-      (result: JoinedInterviewResult) => {
-        if (filter === "all") return true;
-        if (filter === "video") return result.video_url !== null;
-        if (filter === "voice")
-          return (
-            result.audio_url !== null && result.video_url === null
-          );
-
-        if (filter === "behavioral")
-          return result.interview_type === "behavioral";
-        if (filter === "technical")
-          return result.interview_type === "technical";
-        if (filter === "behavioral-video")
-          return (
-            result.interview_type === "behavioral" &&
-            result.video_url !== null
-          );
-        if (filter === "behavioral-voice")
-          return (
-            result.interview_type === "behavioral" &&
-            result.audio_url !== null &&
-            result.video_url === null
-          );
-        if (filter === "technical-video")
-          return (
-            result.interview_type === "technical" &&
-            result.video_url !== null
-          );
-        if (filter === "technical-voice")
-          return (
-            result.interview_type === "technical" &&
-            result.audio_url !== null &&
-            result.video_url === null
-          );
-        return false;
-      }
-    );
-    setFilteredResults(filtered);
-  }, [filter, results]);
-
   const handleSortChange = (sortOrder: "asc" | "desc") => {
-    const sortedResults = [...filteredResults].sort((a, b) => {
-      const dateA = new Date(a.interview_date).getTime();
-      const dateB = new Date(b.interview_date).getTime();
-      return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
-    });
     setSortBy(sortOrder);
-    setFilteredResults(sortedResults);
   };
 
   const handleDelete = () => {
@@ -222,9 +199,11 @@ export default function UserAccountClient({
         setResults((prevResults) =>
           prevResults.filter((r) => Number(r.id) !== selectedResultId)
         );
-        setFilteredResults((prevResults) =>
-          prevResults.filter((r) => Number(r.id) !== selectedResultId)
-        );
+        // setFilteredResults((prevResults) =>
+        //   prevResults.filter((r) => Number(r.id) !== selectedResultId)
+        // );
+
+        //TODO: Implement delete functionality.
         showToast("Success", "Interview Deleted", "success");
       })
       .catch((error) => {
@@ -394,27 +373,6 @@ export default function UserAccountClient({
           ) : filteredResults.length > 0 ? (
             <div>
               {paginatedResults.map((result) => {
-                {
-                  result.filler_words?.length > 0 ? (
-                    result.filler_words.map((item, index) => (
-                      <div
-                        key={index}
-                        className="bg-[#202341] rounded-lg p-4 flex justify-between items-center transition-all hover:shadow-lg hover:shadow-[#7fceff]/20"
-                      >
-                        <span className="text-[#ff6db3] font-bold bg-[#ff6db3]/20 py-1 px-3 rounded-md">
-                          {item.word}
-                        </span>
-                        <span className="text-[#7fceff] font-bold">
-                          {item.count}
-                        </span>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-[#f0f0f0]">
-                      No filler words found
-                    </p>
-                  );
-                }
                 return (
                   <Card
                     key={result.id}
@@ -466,16 +424,19 @@ export default function UserAccountClient({
                           Filler Words
                         </p>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                          {result.filler_words.length > 0 ? (
+                          {result.filler_words?.length > 0 ? (
                             result.filler_words.map(
                               (item: FillerWord) => (
-                                <div key={item.word}>
-                                  <p className="text-sm text-slate-400">
+                                <div
+                                  key={item.word}
+                                  className="bg-[#202341] rounded-lg p-4 flex justify-between items-center transition-all hover:shadow-lg hover:shadow-[#7fceff]/20"
+                                >
+                                  <span className="text-[#ff6db3] font-bold bg-[#ff6db3]/20 py-1 px-3 rounded-md">
                                     {item.word}
-                                  </p>
-                                  <p className="text-lg font-bold">
+                                  </span>
+                                  <span className="text-[#7fceff] font-bold">
                                     {item.count}
-                                  </p>
+                                  </span>
                                 </div>
                               )
                             )

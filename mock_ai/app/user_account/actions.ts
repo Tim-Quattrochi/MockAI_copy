@@ -12,8 +12,7 @@ export async function handleGetallResults(
     .from("results")
     .select(`*, question:question_id(*)`)
     .eq("user_id", uid)
-    .order("interview_date", { ascending: false })
-    .eq("user_id", uid);
+    .order("interview_date", { ascending: false });
 
   if (error) {
     console.error("Error fetching results:", error);
@@ -29,11 +28,13 @@ export async function handleGetallResults(
       name: result.question.name,
       id: result.id,
       question_id: result.question_id,
-      filler_words: JSON.parse(result.filler_words),
-      long_pauses: JSON.parse(result.long_pauses),
+      filler_words: result.filler_words || [],
+      long_pauses: result.long_pauses || [],
       interview_date: new Date(
         result.interview_date
       ).toLocaleString(),
+      score: result.score || 0,
+      ai_feedback: result.ai_feedback || "",
     })
   );
 
