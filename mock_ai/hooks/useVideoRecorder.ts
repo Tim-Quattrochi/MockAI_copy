@@ -7,11 +7,16 @@ import { useUser } from "./useUser";
 import { v4 as uuid } from "uuid";
 import axios from "axios";
 import { Question } from "@/types";
+import { User } from "@supabase/supabase-js";
 
 declare global {
   interface Window {
     webkitSpeechRecognition: any;
   }
+}
+
+interface BlobEvent extends Event {
+  data: Blob;
 }
 
 interface UseVideoRecorderReturn {
@@ -22,15 +27,17 @@ interface UseVideoRecorderReturn {
   stopRecording: () => void;
   videoUrl: string | null;
   videoBlob: Blob | null;
-  uploadedVideoUrl: string | null;
-  saveVideoUrl: () => Promise<void>;
-  uploadAudio: (user, question: Question[]) => Promise<void>;
+  uploadAudio: (
+    user: User,
+    question: Question["question_text"],
+    questionId: Question["id"]
+  ) => Promise<void>;
   transcript: string | null;
 }
 
 export const useVideoRecorder = (
   videoRef: React.RefObject<HTMLVideoElement | null>,
-  selectedQuestion: Question[]
+  selectedQuestion: Question["question_text"]
 ): UseVideoRecorderReturn => {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingComplete, setRecordingComplete] = useState(false);
@@ -38,18 +45,12 @@ export const useVideoRecorder = (
   const [videoBlob, setVideoBlob] = useState<Blob | null>(null); // The video Blob itself
   const [transcript, setTranscript] = useState("");
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null); // Blob for extracted audio
-  const [uploadedVideoUrl, setUploadedVideoUrl] = useState<
-    string | null
-  >(null);
-  const [isUploading, setIsUploading] = useState(false);
   const [hasUploaded, setHasUploaded] = useState(false);
   const [readyToUploadVideo, setReadyToUploadVideo] = useState(false);
 
   const id_unique = uuid();
 
   const { user } = useUser();
-
-  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 
   // For Media Recorder
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -75,7 +76,7 @@ export const useVideoRecorder = (
         videoRef.current.play();
       }
 
-      const handleDataAvailable = (event) => {
+      const handleDataAvailable = (event: BlobEvent): void => {
         videoChunksRef.current.push(event.data);
       };
 
@@ -92,8 +93,9 @@ export const useVideoRecorder = (
         console.log("Video URL:", videoUrl);
 
         // Extract audio from video
-        const extractedAudioBlob =
-          await handleAudioExtraction(videoBlob);
+        const extractedAudioBlob = await handleAudioExtraction(
+          videoBlob
+        );
         console.log("Extracted audioBlob:", extractedAudioBlob); // Debugging log
         setAudioBlob(extractedAudioBlob); // Set audio Blob for upload
 
@@ -174,7 +176,7 @@ export const useVideoRecorder = (
 
   async function handleAudioExtraction(file: Blob) {
     const ffmpeg = new FFmpeg();
-    await ffmpeg.load({ log: true });
+    await ffmpeg.load();
 
     await ffmpeg.writeFile(
       `${id_unique}.webm`,
@@ -195,106 +197,18 @@ export const useVideoRecorder = (
       `${id_unique}.mp3`,
     ]);
 
-    // This reads the converted file from the file system
     const fileData = await ffmpeg.readFile(`${id_unique}.mp3`);
-    // This creates a new file from the raw data
-    const output = new Blob([fileData.buffer], { type: "audio/mp3" });
+
+    const output = new Blob([fileData], { type: "audio/mp3" });
 
     return output;
   }
 
-  const generateUniqueFilename = (
-    baseName: string,
-    extension: string
+  const uploadAudio = async (
+    user: User,
+    question: string,
+    questionId: string
   ) => {
-    const timestamp = Date.now();
-    const randomString = Math.random().toString(36).substring(2, 15);
-    return `${baseName}_${timestamp}_${randomString}.${extension}`;
-  };
-
-  const saveVideoUrl = async () => {
-    if (!videoBlob) {
-      console.error("No video to upload.");
-      return;
-    }
-
-    if (isUploading || hasUploaded) {
-      console.log("Upload already in progress or completed.");
-      return;
-    }
-
-    setIsUploading(true);
-
-    const mimeType = videoBlob.type;
-    let extension = "webm"; // Default to 'webm'
-
-    if (mimeType === "video/x-matroska") {
-      extension = "mkv"; // Use 'mkv' for Matroska
-    } else if (mimeType === "video/mp4") {
-      extension = "mp4"; // Example for mp4 videos
-    }
-
-    const fileNameUnique = generateUniqueFilename(
-      "recorded_video",
-      extension
-    );
-
-    const formData = new FormData();
-    formData.append("file", videoBlob);
-    formData.append("filePath", fileNameUnique);
-
-    try {
-      const response = await fetch("/api/video/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error(`Upload failed: ${response.statusText}`);
-      }
-
-      const { data } = await response.json();
-
-      console.log("uploaded res:", data);
-
-      const videoUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/videos/${data.path}`;
-
-      console.log("VIDEO URL!: ", videoUrl);
-
-      setUploadedVideoUrl(videoUrl);
-
-      if (videoUrl) {
-        const saveResponse = await axios.post(
-          baseUrl
-            ? `${baseUrl}/service/save_video_url`
-            : "/service/save_video_url",
-          {
-            user: user?.email,
-            video_url: videoUrl,
-            question: selectedQuestion,
-          },
-          {
-            headers: { "Content-Type": "application/json" },
-          }
-        );
-        console.log(
-          "Video URL saved successfully:",
-          saveResponse.data
-        );
-        setHasUploaded(true);
-      } else {
-        console.error(
-          "Failed to upload video_url to service/save_video_url."
-        );
-      }
-    } catch (error) {
-      console.error("Error saving video URL:", error);
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const uploadAudio = async (user, question) => {
     console.log("FIRED");
     if (!audioBlob) {
       console.error("No audio to upload.");
@@ -305,13 +219,23 @@ export const useVideoRecorder = (
     const file = await handleAudioExtraction(audioBlob);
 
     const formData = new FormData();
+    formData.append("file", audioBlob, `${id_unique}.mp3`);
+    formData.append("fileName", `${id_unique}.webm`);
+    if (videoBlob) {
+      formData.append(
+        "videoFile",
+        videoBlob,
+        `video_${Date.now()}.webm`
+      );
+    }
     formData.append("audio", file, `${id_unique}.mp3`);
-    formData.append("user", user.email);
+    formData.append("user", user?.email ?? "");
     formData.append("question", question);
+    formData.append("questionId", questionId);
 
     try {
       const response = await axios.post(
-        baseUrl ? `${baseUrl}/api/audio/upload` : "/api/audio/upload",
+        `${process.env.NEXT_PUBLIC_APP_URL}/api/audio/upload`,
         formData,
         {
           headers: { "Content-Type": "multipart/form-data" },
@@ -330,12 +254,6 @@ export const useVideoRecorder = (
   }, [videoBlob, selectedQuestion]);
 
   useEffect(() => {
-    if (readyToUploadVideo && !hasUploaded) {
-      saveVideoUrl();
-    }
-  }, [readyToUploadVideo, hasUploaded]);
-
-  useEffect(() => {
     return () => {
       if (recognitionRef.current) {
         recognitionRef.current.stop();
@@ -348,16 +266,20 @@ export const useVideoRecorder = (
     };
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (videoUrl) URL.revokeObjectURL(videoUrl);
+    };
+  }, [videoUrl]);
+
   return {
     isRecording,
     recordingComplete,
     startRecording,
     stopRecording,
     videoUrl, // Front-end temporary video URL
-    uploadedVideoUrl, // URL after uploading
     transcript,
     audioBlob, // Extracted audio Blob
-    saveVideoUrl, // Function to save video URL
     uploadAudio, // Function to call to upload the audio
     videoBlob,
   };

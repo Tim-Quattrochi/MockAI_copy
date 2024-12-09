@@ -5,22 +5,25 @@ import { Button } from "./ui/Button";
 import { Card, CardHeader, CardTitle, CardContent } from "./ui/card";
 import { Mic, Pause, Video, Rocket } from "lucide-react";
 import { Question } from "@/types";
+import { User } from "@supabase/supabase-js";
 
-interface VoiceRecorderProps {
-  selectedQuestion: Question[];
-  user: any;
+interface VideoRecorderProps {
+  selectedQuestion: Question["question_text"];
+  questionId: Question["id"];
+  user: User;
   onRecordingComplete: () => void;
   setIsUploading: (isUploading: boolean) => void;
   isUploading: boolean;
 }
 
-export default function VoiceRecorder({
+export default function VideoRecorder({
   selectedQuestion,
+  questionId,
   user,
   onRecordingComplete,
   setIsUploading,
   isUploading,
-}: VoiceRecorderProps) {
+}: VideoRecorderProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const {
@@ -28,8 +31,6 @@ export default function VoiceRecorder({
     startRecording,
     stopRecording,
     videoUrl,
-    uploadedVideoUrl,
-    saveVideoUrl,
     uploadAudio,
     transcript,
     videoBlob,
@@ -57,7 +58,7 @@ export default function VoiceRecorder({
 
       if (videoBlob && audioBlob) {
         try {
-          await uploadAudio(user, selectedQuestion); // Upload extracted audio
+          await uploadAudio(user, selectedQuestion, questionId); // Upload extracted audio
           onRecordingComplete();
           setIsLoading(false);
           videoRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -133,15 +134,15 @@ export default function VoiceRecorder({
               isUploading
                 ? "bg-[#ff6db3] text-[#050614] cursor-not-allowed"
                 : isRecording
-                  ? "bg-[#ff6db3] hover:bg-[#ff6db3]/90"
-                  : "bg-[#7fceff] hover:bg-[#7fceff]/90"
+                ? "bg-[#ff6db3] hover:bg-[#ff6db3]/90"
+                : "bg-[#7fceff] hover:bg-[#7fceff]/90"
             }`}
             aria-label={
               isUploading
                 ? "Uploading..."
                 : isRecording
-                  ? "Stop Recording"
-                  : "Start Recording"
+                ? "Stop Recording"
+                : "Start Recording"
             }
           >
             {isUploading ? (

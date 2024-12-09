@@ -1,12 +1,43 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
-import path from "path";
 import {
   GoogleAIFileManager,
   FileState,
 } from "@google/generative-ai/server";
-import fs, { access } from "fs/promises";
 import { writeFileSync } from "fs";
+
+async function uploadAndProcessFile(
+  fileManager: GoogleAIFileManager,
+  videoFilePath: string,
+  mimeType: string
+) {
+  const uploadResult = await fileManager.uploadFile(videoFilePath, {
+    mimeType,
+    displayName: videoFilePath.split("/").pop(),
+  });
+
+  console.log(
+    "upload result from file manager utils: ",
+    uploadResult
+  );
+
+  let file = await fileManager.getFile(uploadResult.file.name);
+  while (file.state === FileState.PROCESSING) {
+    process.stdout.write(".");
+    await new Promise((resolve) => setTimeout(resolve, 10_000));
+    file = await fileManager.getFile(uploadResult.file.name);
+  }
+
+  console.log(
+    `Uploaded file ${uploadResult.file.displayName} as: ${uploadResult.file.uri}`
+  );
+
+  if (file.state === FileState.FAILED) {
+    throw new Error("Audio processing failed.");
+  }
+
+  return uploadResult;
+}
 
 export async function POST(
   request: NextRequest
@@ -28,6 +59,7 @@ export async function POST(
     // form data from VoiceRecorder which is rendered by Interview.tsx
     const formData = await request.formData();
     const file = formData.get("file") as File;
+    const videoFile = formData.get("videoFile") as File;
     const fileName = formData.get("fileName") as string;
     const questionId = formData.get("questionId") as string;
     const userEmail = formData.get("user") as string;
@@ -37,69 +69,61 @@ export async function POST(
     const position = formData.get("position") as string;
     const questionType = formData.get("questionType") as string;
 
-    const filePath = `${authedUser.id}/${fileName}`;
+    const isVideoUpload = Boolean(videoFile);
+    const mimeType = isVideoUpload ? videoFile.type : "audio/webm";
 
-    if (!file || !filePath) {
-      return NextResponse.json(
-        { error: "File and filePath are required." },
-        { status: 400 }
-      );
-    }
+    let signedUrl: string | null = null;
 
-    const uniqueFileName = `${Date.now()}-${Math.random()
-      .toString(36)
-      .substring(2, 15)}.${fileName.split(".").pop()}`;
-    const uniqueFilePath = `${authedUser.id}/${uniqueFileName}`;
-    const mimeType = file.type;
+    if (isVideoUpload && videoFile) {
+      const videoPath = `${authedUser.id}/video_${Date.now()}.webm`;
 
-    const { data, error } = await supabase.storage
-      .from("audio-interviews")
-      .upload(filePath, file, {
-        contentType: file.type,
-        upsert: false,
-      });
+      const { data: videoData, error: videoError } =
+        await supabase.storage
+          .from("video-interviews")
+          .upload(videoPath, videoFile, {
+            contentType: videoFile.type,
+            upsert: false,
+          });
 
-    if (error) {
-      console.error("Supabase upload error:", error);
-      return NextResponse.json(
-        {
-          error: "Failed to upload the file.",
-          details: error.message,
-        },
-        { status: 500 }
-      );
-    }
+      if (videoError) throw videoError;
 
-    const { data: signedUrlData, error: signedUrlError } =
-      await supabase.storage
+      const { data: videoUrlData } = await supabase.storage
+        .from("video-interviews")
+        .createSignedUrl(videoPath, 120 * 120);
+
+      signedUrl = videoUrlData?.signedUrl ?? null;
+    } else {
+      const audioPath = `${authedUser.id}/${formData.get(
+        "fileName"
+      )}`;
+
+      const { error: audioError } = await supabase.storage
         .from("audio-interviews")
-        .createSignedUrl(filePath, 120 * 120, { download: true });
+        .upload(audioPath, file, {
+          contentType: "audio/webm",
+          upsert: false,
+        });
 
-    if (signedUrlError) {
-      console.error("Failed to generate signed URL:", signedUrlError);
-      return NextResponse.json(
-        {
-          error: "Failed to generate signed URL",
-          details: signedUrlError.message,
-        },
-        { status: 500 }
-      );
+      if (audioError) throw audioError;
+
+      const { data: audioUrlData } = await supabase.storage
+        .from("audio-interviews")
+        .createSignedUrl(audioPath, 120 * 120);
+
+      signedUrl = audioUrlData?.signedUrl ?? null;
     }
-
-    const signedUrl = signedUrlData?.signedUrl;
 
     if (!signedUrl) {
-      return NextResponse.json(
-        { error: "Failed to retrieve the signed URL." },
-        { status: 500 }
-      );
+      throw new Error("Failed to generate signed URL");
     }
 
     const response = await fetch(signedUrl);
 
     const arrayBuffer = await response.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-
+    const uniqueFileName = `${Date.now()}-${Math.random()
+      .toString(36)
+      .substring(2, 15)}.webm`;
     const tmpPath = `/tmp/${uniqueFileName}`;
 
     writeFileSync(tmpPath, buffer);
@@ -110,41 +134,6 @@ export async function POST(
     );
 
     // function to upload and process the file
-    async function uploadAndProcessFile(
-      fileManager: GoogleAIFileManager,
-      videoFilePath: string,
-      mimeType: string
-    ) {
-      const uploadResult = await fileManager.uploadFile(
-        videoFilePath,
-        {
-          mimeType,
-          displayName: videoFilePath.split("/").pop(),
-        }
-      );
-
-      console.log(
-        "upload result from file manager utils: ",
-        uploadResult
-      );
-
-      let file = await fileManager.getFile(uploadResult.file.name);
-      while (file.state === FileState.PROCESSING) {
-        process.stdout.write(".");
-        await new Promise((resolve) => setTimeout(resolve, 10_000));
-        file = await fileManager.getFile(uploadResult.file.name);
-      }
-
-      console.log(
-        `Uploaded file ${uploadResult.file.displayName} as: ${uploadResult.file.uri}`
-      );
-
-      if (file.state === FileState.FAILED) {
-        throw new Error("Audio processing failed.");
-      }
-
-      return uploadResult;
-    }
 
     const genaiUploadedFile = await uploadAndProcessFile(
       fileManager,
@@ -218,13 +207,11 @@ export async function POST(
 
     // update the results table to include the audio_url.
     // api/generate first inserts question_id and user_id into the results table.
-    const { data: resultData, error: resultError } = await supabase
+    await supabase
       .from("results")
-      .update([
-        {
-          audio_url: signedUrl,
-        },
-      ])
+      .update({
+        [isVideoUpload ? "video_url" : "audio_url"]: signedUrl,
+      })
       .eq("question_id", questionId);
 
     return NextResponse.json({

@@ -355,7 +355,8 @@ const Interview = () => {
                 />
               ) : (
                 <VideoRecorder
-                  selectedQuestion={selectedQuestion}
+                  selectedQuestion={selectedQuestion.question_text}
+                  questionId={selectedQuestion.id}
                   user={user}
                   onRecordingComplete={() => {
                     setIsQuestionAnswered(true);
