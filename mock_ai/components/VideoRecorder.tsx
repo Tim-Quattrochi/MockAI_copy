@@ -3,7 +3,8 @@ import { useEffect, useState, useRef } from "react";
 import { useVideoRecorder } from "@/hooks/useVideoRecorder";
 import { Button } from "./ui/Button";
 import { Card, CardHeader, CardTitle, CardContent } from "./ui/card";
-import { Mic, Pause, Video, Rocket } from "lucide-react";
+import { Mic, Pause, Video, Rocket, CircleStop } from "lucide-react";
+import { useTimer } from "@/hooks/useTimer";
 import { Question } from "@/types";
 import { User } from "@supabase/supabase-js";
 
@@ -114,7 +115,7 @@ export default function VideoRecorder({
                   crossOrigin="anonymous"
                   onError={() => console.error("Error loading video")}
                 >
-                  <source src={videoUrl} type="video/webm" />
+                  <source src={videoUrl ?? ""} type="video/webm" />
                   Your browser does not support the video tag.
                 </video>
 
@@ -151,7 +152,7 @@ export default function VideoRecorder({
                 <span className="ml-2">Uploading...</span>
               </>
             ) : isRecording ? (
-              <Pause className="h-8 w-8 text-[#050614]" />
+              <CircleStop className="h-8 w-8 text-destructive" />
             ) : (
               <Mic className="h-8 w-8 text-[#050614]" />
             )}

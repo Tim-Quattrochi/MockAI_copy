@@ -416,8 +416,12 @@ const Interview = () => {
                   <Cloud className="mr-2 h-4 w-4" /> Uploading...
                 </>
               ) : (
-                <div onClick={handleNavigateToResults}>
-                  View Results <ArrowRight className="ml-2 h-4 w-4" />
+                <div
+                  className="flex"
+                  onClick={handleNavigateToResults}
+                >
+                  View Results{" "}
+                  <ArrowRight className="ml-2 h-4 w-4 self-center" />
                 </div>
               )}
             </Button>

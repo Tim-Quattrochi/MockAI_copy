@@ -5,12 +5,14 @@ import { Feedback, InterviewData, Question } from "@/types";
 import { Button } from "./ui/Button";
 import CircularProgress from "./ui/CircularProgress";
 import { useToast } from "@/hooks/useToast";
+import { useTimer } from "@/hooks/useTimer";
 
 import { CloudIcon, MicIcon, OctagonX } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface VoiceRecorderProps {
-  questionId: string;
-  selectedQuestion: Question["question"];
+  questionId: Question["id"];
+  selectedQuestion: Question["question_text"];
   user: any;
   onRecordingComplete: () => void;
   setIsUploading: (isUploading: boolean) => void;
@@ -32,7 +34,7 @@ export default function VoiceRecorder({
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [timer, setTimer] = useState(0);
+
   const [uploaded, setUploaded] = useState(false);
 
   const { toast, dismiss } = useToast();
@@ -50,6 +52,15 @@ export default function VoiceRecorder({
     }, 5000);
   };
 
+  const { time, startTimer, stopTimer, resetTimer, seconds } =
+    useTimer({
+      onTimeWarning: () => showToast(),
+      onTimeUp: () => {
+        stopRecording();
+        console.log("Recording stopped after 3 minutes");
+      },
+    });
+
   const {
     isRecording,
     recordingComplete,
@@ -61,39 +72,13 @@ export default function VoiceRecorder({
   } = useVoiceRecorder()!;
 
   useEffect(() => {
-    let interval: NodeJS.Timeout | undefined = undefined;
     if (isRecording) {
-      interval = setInterval(() => {
-        setTimer((prevTimer) => {
-          const newTimer = prevTimer + 1;
-
-          if (newTimer === 150) {
-            showToast();
-          }
-
-          if (newTimer === 179) {
-            stopRecording();
-            console.log("Recording stopped after 3 minutes");
-            clearInterval(interval);
-          }
-
-          return newTimer;
-        });
-      }, 1000);
+      startTimer();
     } else {
-      clearInterval(interval);
+      stopTimer();
+      resetTimer();
     }
-
-    return () => clearInterval(interval);
   }, [isRecording]);
-
-  const formatTime = (time: number) => {
-    const minutes = Math.floor(time / 60);
-    const seconds = time % 60;
-    return `${minutes.toString().padStart(2, "0")}:${seconds
-      .toString()
-      .padStart(2, "0")}`;
-  };
 
   const handleUpload = async (audioBlob: Blob) => {
     setIsUploading(true);
@@ -155,12 +140,10 @@ export default function VoiceRecorder({
           setUploaded(false);
         }, 2000);
       } else {
-        setTimer(0);
+        resetTimer();
       }
     }
   }, [recordingComplete, audioBlob]);
-
-  console.log(selectedQuestion);
 
   return (
     <div className="flex items-center justify-center h-auto w-full">
@@ -175,38 +158,60 @@ export default function VoiceRecorder({
                     : "text-red-500 animate-pulse font-extrabold text-xl"
                 }`}
               >
-                {!isRecording && !isUploading
-                  ? "Ready to record."
-                  : "Recording"}
+                {isUploading
+                  ? "Uploading..."
+                  : isRecording
+                  ? "Recording..."
+                  : recordingComplete
+                  ? "Recording complete"
+                  : "Ready to record"}
               </span>
 
               <CircularProgress
                 radius={35}
                 stroke={5}
-                progress={timer}
+                progress={Number(time)}
                 maxTime={180}
-                formattedTime={formatTime(timer)}
+                formattedTime={time}
               />
             </div>
-            <div className="p-4 text-gray-400 text-center">
-              {isRecording
-                ? transcript
+            <p
+              className={cn(
+                "text-center transition-colors m-2 p-2",
+                isUploading && "text-blue-400",
+                isRecording && "text-white",
+                recordingComplete && "text-green-400",
+                !isRecording && !recordingComplete && "text-gray-400"
+              )}
+            >
+              {isUploading
+                ? "Processing your recording..."
+                : isRecording
+                ? transcript || "Listening..."
+                : recordingComplete
+                ? transcript || "Recording saved, ready to upload"
                 : "Your thoughts will appear here..."}
-            </div>
+            </p>
             <div className="w-full flex justify-center gap-5 items-center relative pb-4">
-              <button
-                onClick={isRecording ? stopRecording : startRecording}
+              <Button
+                onClick={handleToggleRecording}
                 className="bg-blue-500 hover:bg-blue-600 text-white rounded-full w-16 h-16 flex items-center justify-center relative"
               >
                 <div
                   className={`absolute inset-0 rounded-full ${
-                    timer >= 150
+                    Number(time) >= 150
                       ? "bg-red-500 animate-pulse"
                       : "bg-blue-500 opacity-50"
                   }`}
                 ></div>
-                <MicIcon className="w-8 h-8 z-10" />
-              </button>
+                {isUploading ? (
+                  <CloudIcon className="w-8 h-8 z-10" />
+                ) : isRecording ? (
+                  <OctagonX className="w-8 h-8 z-10" />
+                ) : (
+                  <MicIcon className="w-8 h-8 z-10" />
+                )}
+              </Button>
             </div>
           </div>
 
