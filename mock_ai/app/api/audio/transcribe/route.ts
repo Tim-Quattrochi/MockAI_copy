@@ -14,7 +14,7 @@ export async function POST(
 ): Promise<NextResponse> {
   try {
     const {
-      //Note to self: req data from api/audio/upload/route.ts
+      //Note to self: req data from components/VoiceRecorder
       fileUri,
       mimeType,
       questionId,

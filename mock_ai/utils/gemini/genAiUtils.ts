@@ -1,6 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { schema as genAiResultsSchema } from "@/utils/gemini/transcriptionSchema";
-import { createClient } from "@/supabase/server";
 import { TranscriptionResponse } from "../transcriptionUtils";
 
 export async function generateTranscription(

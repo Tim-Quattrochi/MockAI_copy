@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/supabase/server";
+import { TranscriptionAnalysisResponse } from "@/utils/transcriptionUtils";
 import {
   GoogleAIFileManager,
   FileState,
@@ -117,7 +118,8 @@ export async function uploadAudio(formData: FormData) {
       }
     );
 
-    const transcriptionData = await transcriptionResponse.json();
+    const transcriptionData: TranscriptionAnalysisResponse =
+      await transcriptionResponse.json();
 
     await supabase
       .from("results")

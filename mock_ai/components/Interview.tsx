@@ -1,10 +1,15 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import {
+  useState,
+  useEffect,
+  useRef,
+  ChangeEvent,
+  useCallback,
+} from "react";
 import { useUser } from "@/hooks/useUser";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import AnalysisCard from "./AnalysisCard";
-import Link from "next/link";
 import VoiceRecorder from "./VoiceRecorder";
 import VideoRecorder from "./VideoRecorder";
 import { Skeleton } from "./ui/skeleton";
@@ -58,8 +63,6 @@ const Interview = () => {
   };
   const [interviewData, setInterviewData] = useState(initialData);
 
-  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-
   const router = useRouter();
 
   useEffect(() => {
@@ -83,20 +86,29 @@ const Interview = () => {
     );
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setInterviewData({ ...interviewData, [name]: value });
-  };
+  const handleInputChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      const { name, value } = e.target;
+      setInterviewData((prevData) => ({
+        ...prevData,
+        [name]: value,
+      }));
+    },
+    []
+  );
 
   const handleSelectChange = (name: string, value: string) => {
     setInterviewData({ ...interviewData, [name]: value });
   };
 
-  const fetchQuestion = async () => {
+  const fetchQuestion = useCallback(async () => {
+    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+    if (!baseUrl) throw new Error("API base URL is not defined");
+
     setIsQuestionFetching(true);
     try {
       const response = await axios.post<QuestionResponse>(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/generate`,
+        `${baseUrl}/api/generate`,
         {
           name: interviewData.name,
           company: interviewData.company,
@@ -109,24 +121,25 @@ const Interview = () => {
       );
 
       setSelectedQuestion(response.data.question);
-      setIsQuestionFetching(false);
     } catch (error) {
+      if (axios.isAxiosError(error)) {
+        setErrorMessage(
+          error.response?.data?.message ||
+            "Failed to fetch intertview question"
+        );
+      } else {
+        setErrorMessage("An unexpected error occurred");
+      }
+    } finally {
       setIsQuestionFetching(false);
-      setErrorMessage(
-        "Failed to fetch the interview question. Please try again."
-      );
-      console.error(
-        "Error fetching interview question from Gemini:",
-        error
-      );
     }
-  };
+  }, [interviewData]);
 
   useEffect(() => {
     if (user && step === 5 && !selectedQuestion) {
       fetchQuestion();
     }
-  }, [user, step, selectedQuestion]);
+  }, [user, step, selectedQuestion, fetchQuestion]);
 
   const handleNextStep = () => {
     setStepVisible(false);

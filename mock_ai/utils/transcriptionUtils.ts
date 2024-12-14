@@ -33,6 +33,11 @@ export interface TranscriptionResponse {
   ai_feedback: string;
 }
 
+export interface TranscriptionAnalysisResponse {
+  message: string;
+  transcription: AnalysisResult;
+}
+
 export interface AnalysisResult {
   fillerWordCount: { [key: string]: number };
   longPauses: string[];
@@ -46,6 +51,14 @@ export interface AnalysisResult {
   interviewer_question?: string;
 }
 
+interface ScoreParameters {
+  fillerWordCount: { [key: string]: number };
+  longPauseCount: number;
+  positive_sentiment_score: number;
+  negative_sentiment_score: number;
+  neutral_sentiment_score: number;
+}
+
 export function calculateScore(
   {
     fillerWordCount,
@@ -53,8 +66,8 @@ export function calculateScore(
     positive_sentiment_score,
     negative_sentiment_score,
     neutral_sentiment_score,
-  },
-  baseScore
+  }: ScoreParameters,
+  baseScore: number
 ): number {
   const fillerWordPenalty = Object.values(fillerWordCount).reduce(
     (acc, count) => acc + count,
@@ -62,10 +75,19 @@ export function calculateScore(
   );
   const pausePenalty = longPauseCount;
   const sentimentScore =
-    positive_sentiment_score - negative_sentiment_score;
+    positive_sentiment_score -
+    negative_sentiment_score +
+    neutral_sentiment_score * 0.5;
+
+  const fillerWordWeight = 1;
+  const pauseWeight = 1;
+  const sentimentWeight = 1;
 
   return (
-    baseScore - fillerWordPenalty - pausePenalty + sentimentScore
+    baseScore -
+    fillerWordPenalty * fillerWordWeight -
+    pausePenalty * pauseWeight +
+    sentimentScore * sentimentWeight
   );
 }
 
@@ -87,13 +109,13 @@ export async function analyzeAudio(
     neutral_sentiment_score,
   } = response;
 
-  const fillerWordCount = {};
+  const fillerWordCount: { [key: string]: number } = {};
   response?.filler_words.forEach((item) => {
     fillerWordCount[item.word] = item.count;
   });
 
-  const longPauseCount = (pause_durations || []).filter(
-    (pause) => pause.duration >= 10
+  const longPauseCount = (pause_durations ?? []).filter(
+    (pause) => pause >= 10
   ).length;
 
   const pauses = (pause_durations || []).map((pause) => {
@@ -102,11 +124,6 @@ export async function analyzeAudio(
     }
     return `${pause.toFixed(2)} seconds`;
   });
-
-  const pauseDurations = (pause_durations || [])
-    .filter((pause) => pause >= 10)
-    .map((pause) => `${pause.toFixed(0)} seconds`)
-    .join(", ");
 
   const score = calculateScore(
     {
@@ -120,11 +137,13 @@ export async function analyzeAudio(
   );
 
   const result: AnalysisResult = {
-    fillerWordCount: fillerWordCount || {},
-    transcript: transcript || "",
-    words: words || [],
-    filler_words: filler_words || [],
-    pause_durations: pause_durations || [],
+    fillerWordCount: fillerWordCount,
+    transcript: transcript,
+    words: words,
+    filler_words: filler_words,
+    long_pauses: response.long_pauses,
+    longPauses: pauses,
+    pause_durations: pause_durations,
     score: score,
     interviewer_question: interviewer_question,
     ai_feedback: response.ai_feedback,
