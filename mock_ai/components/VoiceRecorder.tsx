@@ -1,24 +1,26 @@
 "use client";
-import { useState, useEffect } from "react";
-import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
+import { useState } from "react";
 import { Feedback, InterviewData, Question } from "@/types";
 import { Button } from "./ui/Button";
 import CircularProgress from "./ui/CircularProgress";
+import { useMediaRecorder } from "@/hooks/useMediaRecorder";
 import { useToast } from "@/hooks/useToast";
 import { useTimer } from "@/hooks/useTimer";
-
 import { CloudIcon, MicIcon, OctagonX } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { uploadAudio } from "@app/interview/actions";
+import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
+import { User } from "@supabase/supabase-js";
 
 interface VoiceRecorderProps {
   questionId: Question["id"];
   selectedQuestion: Question["question_text"];
-  user: any;
+  user: User;
   onRecordingComplete: () => void;
   setIsUploading: (isUploading: boolean) => void;
   isUploading: boolean;
   interviewData: InterviewData;
-  setResults: (results: any) => void;
+  setResults: (results: Feedback) => void;
 }
 
 export default function VoiceRecorder({
@@ -31,13 +33,52 @@ export default function VoiceRecorder({
   interviewData,
   setResults,
 }: VoiceRecorderProps) {
-  const [feedback, setFeedback] = useState<Feedback | null>(null);
-  const [showFeedback, setShowFeedback] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-
-  const [uploaded, setUploaded] = useState(false);
+  const [transcript, setTranscript] = useState("");
 
   const { toast, dismiss } = useToast();
+
+  const handleAudioStop = async (audioBlob: Blob) => {
+    await handleUpload(audioBlob);
+  };
+
+  const handleToggleRecording = async () => {
+    if (!isRecording) {
+      handleStartRecording();
+    } else {
+      handleStopRecording();
+    }
+  };
+
+  const handleStartRecording = async () => {
+    await startRecording();
+    startRecognition();
+    startTimer();
+  };
+
+  const handleStopRecording = () => {
+    stopRecording();
+    stopRecognition();
+    stopTimer();
+  };
+
+  const { startRecognition, stopRecognition } = useSpeechRecognition({
+    onResult: setTranscript,
+  });
+
+  const { isRecording, startRecording, stopRecording } =
+    useMediaRecorder({
+      onStop: handleAudioStop,
+      mediaStreamConstraints: { audio: true },
+      mimeType: "audio/wav",
+    });
+
+  const { time, startTimer, stopTimer, resetTimer } = useTimer({
+    onTimeWarning: () => showToast(),
+    onTimeUp: () => {
+      handleToggleRecording();
+      resetTimer();
+    },
+  });
 
   const showToast = () => {
     const myToast = toast({
@@ -52,44 +93,12 @@ export default function VoiceRecorder({
     }, 5000);
   };
 
-  const { time, startTimer, stopTimer, resetTimer, seconds } =
-    useTimer({
-      onTimeWarning: () => showToast(),
-      onTimeUp: () => {
-        stopRecording();
-        console.log("Recording stopped after 3 minutes");
-      },
-    });
-
-  const {
-    isRecording,
-    recordingComplete,
-    audioUrl,
-    transcript,
-    startRecording,
-    stopRecording,
-    audioBlob,
-  } = useVoiceRecorder()!;
-
-  useEffect(() => {
-    if (isRecording) {
-      startTimer();
-    } else {
-      stopTimer();
-      resetTimer();
-    }
-  }, [isRecording]);
-
-  const handleUpload = async (audioBlob: Blob) => {
+  async function handleUpload(audioBlob: Blob) {
     setIsUploading(true);
     const formData = new FormData();
     formData.append("file", audioBlob);
-    const fileExtension = audioBlob.type.split("/")[1];
-    formData.append(
-      "fileName",
-      `${Date.now()}-${user.email}.${fileExtension}`
-    );
-    formData.append("user", user.email);
+    formData.append("fileName", `${Date.now()}-${user.email}.wav`);
+    formData.append("user", user.email ?? "");
     formData.append("questionId", questionId);
     formData.append("question", JSON.stringify(selectedQuestion));
     formData.append("name", interviewData.name);
@@ -97,53 +106,32 @@ export default function VoiceRecorder({
     formData.append("position", interviewData.position);
     formData.append("questionType", interviewData.questionType);
 
-    const URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/audio/upload`;
-    try {
-      const response = await fetch(URL, {
-        method: "POST",
-        body: formData,
-      });
-      const data = await response.json();
-      setFeedback(data);
-      setResults(data);
-      setShowFeedback(true);
+    const result = await uploadAudio(formData);
+
+    if (result.success) {
+      const feedback: Feedback = {
+        ...result,
+        filler_word_count: {
+          like: 0,
+          so: 0,
+          uh: 0,
+          um: 0,
+          "you know": 0,
+        },
+        long_pause_count: 0,
+        pause_durations: [],
+      };
+      setResults(feedback);
       onRecordingComplete();
-      setIsUploading(false);
-    } catch (error) {
-      console.error("Error uploading audio file:", error);
-      setIsUploading(false);
-      setIsUploading(false);
-      setFeedback(null);
-      setShowFeedback(false);
-    }
-  };
-
-  const handleToggleRecording = async () => {
-    if (!isRecording) {
-      setIsLoading(true);
-      startRecording();
     } else {
-      setIsLoading(false);
-      stopRecording();
+      toast({
+        title: "Error",
+        description: result.error,
+        variant: "destructive",
+      });
     }
-  };
-
-  useEffect(() => {
-    if (recordingComplete && audioBlob) {
-      // reset feedback
-      setFeedback(null);
-      handleUpload(audioBlob);
-
-      if (uploaded) {
-        setTimeout(() => {
-          setIsUploading(false);
-          setUploaded(false);
-        }, 2000);
-      } else {
-        resetTimer();
-      }
-    }
-  }, [recordingComplete, audioBlob]);
+    setIsUploading(false);
+  }
 
   return (
     <div className="flex items-center justify-center h-auto w-full">
@@ -162,8 +150,6 @@ export default function VoiceRecorder({
                   ? "Uploading..."
                   : isRecording
                   ? "Recording..."
-                  : recordingComplete
-                  ? "Recording complete"
                   : "Ready to record"}
               </span>
 
@@ -180,16 +166,13 @@ export default function VoiceRecorder({
                 "text-center transition-colors m-2 p-2",
                 isUploading && "text-blue-400",
                 isRecording && "text-white",
-                recordingComplete && "text-green-400",
-                !isRecording && !recordingComplete && "text-gray-400"
+                !isRecording && "text-gray-400"
               )}
             >
               {isUploading
                 ? "Processing your recording..."
                 : isRecording
                 ? transcript || "Listening..."
-                : recordingComplete
-                ? transcript || "Recording saved, ready to upload"
                 : "Your thoughts will appear here..."}
             </p>
             <div className="w-full flex justify-center gap-5 items-center relative pb-4">

@@ -55,7 +55,7 @@ export type InterviewData = {
   company: string;
   position: string;
   questionType: "technical" | "behavioral";
-  recordingType: "audio" | "video";
+  recordingType?: "audio";
 };
 
 export type FilterType = "all" | "video" | "voice";

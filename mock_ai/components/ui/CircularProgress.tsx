@@ -20,6 +20,17 @@ const CircularProgress = ({
   const strokeDashoffset =
     circumference - (progress / maxTime) * circumference;
 
+  const getStrokeColor = () => {
+    if (progress >= maxTime * 0.75) {
+      return "#FF6DB3";
+    }
+    return "#7ECEFE";
+  };
+
+  const strokeColor = getStrokeColor();
+  const textColor =
+    progress >= maxTime * 0.75 ? "#FF6DB3" : "#7ECEFE";
+
   return (
     <svg height={radius * 2} width={radius * 2}>
       <circle
@@ -31,14 +42,15 @@ const CircularProgress = ({
         cy={radius}
       />
       <circle
-        stroke={progress >= maxTime * 0.75 ? "red" : "blue"}
+        stroke={strokeColor}
         fill="transparent"
         strokeWidth={stroke}
-        strokeDasharray={circumference + " " + circumference}
+        strokeDasharray={`${circumference} ${circumference}`}
         style={{ strokeDashoffset }}
         r={normalizedRadius}
         cx={radius}
         cy={radius}
+        strokeLinecap="round"
       />
 
       <text

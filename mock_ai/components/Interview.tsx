@@ -1,11 +1,15 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import {
+  useState,
+  useEffect,
+  useRef,
+  ChangeEvent,
+  useCallback,
+} from "react";
 import { useUser } from "@/hooks/useUser";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import AnalysisCard from "./AnalysisCard";
-import Link from "next/link";
-import VoiceRecorder from "./VoiceRecorder";
 import VideoRecorder from "./VideoRecorder";
 import { Skeleton } from "./ui/skeleton";
 import { Button } from "./ui/Button";
@@ -27,21 +31,40 @@ import {
   CardTitle,
 } from "./ui/card";
 import { Cloud, ArrowRight } from "lucide-react";
-import type {
-  InterviewData,
-  Question,
-  QuestionResponse,
+import {
+  type InterviewData,
+  type Question,
+  type QuestionResponse,
 } from "@/types";
+import { AnalysisResult } from "@/utils/transcriptionUtils";
+
+interface InterviewState {
+  isUploading: boolean;
+  isQuestionAnswered: boolean;
+}
+
+const initialData: InterviewData = {
+  name: "",
+  company: "",
+  position: "",
+  questionType: "technical",
+};
 
 const Interview = () => {
   const { user, error } = useUser();
   const [step, setStep] = useState(1);
+  const [interviewData, setInterviewData] = useState(initialData);
   const [selectedQuestion, setSelectedQuestion] =
     useState<Question | null>(null);
   const [isQuestionAnswered, setIsQuestionAnswered] = useState(false);
   const [stepVisible, setStepVisible] = useState(true);
-  const [isUploading, setIsUploading] = useState(false);
-  const [results, setResults] = useState([]);
+  const [state, setState] = useState<InterviewState>({
+    isUploading: false,
+    isQuestionAnswered: false,
+  });
+  const [results, setResults] = useState<
+    AnalysisResult | undefined
+  >();
   const [isQuestionFetching, setIsQuestionFetching] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(
     null
@@ -49,18 +72,16 @@ const Interview = () => {
 
   const nameRef = useRef<HTMLInputElement>(null);
 
-  const initialData: InterviewData = {
-    name: "",
-    company: "",
-    position: "",
-    questionType: "technical",
-    recordingType: "audio",
-  };
-  const [interviewData, setInterviewData] = useState(initialData);
-
-  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-
   const router = useRouter();
+
+  const onRecordingComplete = () => {
+    setIsQuestionAnswered(true);
+    setState((prevState) => ({ ...prevState, isUploading: false }));
+  };
+
+  const onRecordingStart = () => {
+    setState((prevState) => ({ ...prevState, isUploading: true }));
+  };
 
   useEffect(() => {
     if (user && nameRef.current) {
@@ -83,20 +104,29 @@ const Interview = () => {
     );
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setInterviewData({ ...interviewData, [name]: value });
-  };
+  const handleInputChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      const { name, value } = e.target;
+      setInterviewData((prevData) => ({
+        ...prevData,
+        [name]: value,
+      }));
+    },
+    []
+  );
 
   const handleSelectChange = (name: string, value: string) => {
     setInterviewData({ ...interviewData, [name]: value });
   };
 
-  const fetchQuestion = async () => {
+  const fetchQuestion = useCallback(async () => {
+    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+    if (!baseUrl) throw new Error("API base URL is not defined");
+
     setIsQuestionFetching(true);
     try {
       const response = await axios.post<QuestionResponse>(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/generate`,
+        `${baseUrl}/api/generate`,
         {
           name: interviewData.name,
           company: interviewData.company,
@@ -109,24 +139,25 @@ const Interview = () => {
       );
 
       setSelectedQuestion(response.data.question);
-      setIsQuestionFetching(false);
     } catch (error) {
+      if (axios.isAxiosError(error)) {
+        setErrorMessage(
+          error.response?.data?.message ||
+            "Failed to fetch interview question"
+        );
+      } else {
+        setErrorMessage("An unexpected error occurred");
+      }
+    } finally {
       setIsQuestionFetching(false);
-      setErrorMessage(
-        "Failed to fetch the interview question. Please try again."
-      );
-      console.error(
-        "Error fetching interview question from Gemini:",
-        error
-      );
     }
-  };
+  }, [interviewData]);
 
   useEffect(() => {
     if (user && step === 5 && !selectedQuestion) {
       fetchQuestion();
     }
-  }, [user, step, selectedQuestion]);
+  }, [user, step, selectedQuestion, fetchQuestion]);
 
   const handleNextStep = () => {
     setStepVisible(false);
@@ -157,7 +188,7 @@ const Interview = () => {
             {step !== 6 && "Interview Meeting Room"}
           </CardTitle>
           <CardDescription className="text-grey">
-            {step !== 6 &&
+            {step !== 5 &&
               "Please provide your details to join the interview"}
           </CardDescription>
         </CardHeader>
@@ -284,41 +315,6 @@ const Interview = () => {
               </div>
               <Button
                 onClick={handleNextStep}
-                className="w-full bg-primary-blue text-primary-blue-100 hover:bg-secondary-orange z-20 mt-2"
-                tabIndex={1}
-                onKeyDown={handleNextStep}
-              >
-                Next <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </div>
-          )}
-
-          {step === 5 && (
-            <div
-              className={`space-y-4 transition-opacity duration-500 ${
-                !stepVisible ? "opacity-0" : "opacity-100"
-              }`}
-            >
-              <div className="space-y-2">
-                <Label htmlFor="recordingType">Recording Type</Label>
-                <Select
-                  name="recordingType"
-                  value={interviewData.recordingType}
-                  onValueChange={(value) =>
-                    handleSelectChange("recordingType", value)
-                  }
-                >
-                  <SelectTrigger className="bg-primary-blue-100 text-black-100">
-                    <SelectValue placeholder="Select recording type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="audio">Audio</SelectItem>
-                    <SelectItem value="video">Video</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button
-                onClick={handleNextStep}
                 className="w-full bg-primary-blue text-primary-blue-100 hover:bg-secondary-orange"
                 tabIndex={1}
                 onKeyDown={handleNextStep}
@@ -328,7 +324,7 @@ const Interview = () => {
             </div>
           )}
 
-          {step === 6 && selectedQuestion && (
+          {step === 5 && selectedQuestion && (
             <div
               className={`space-y-4 transition-opacity duration-500 ${
                 !stepVisible ? "opacity-0" : "opacity-100"
@@ -340,36 +336,18 @@ const Interview = () => {
                 type="question"
                 isLoading={isQuestionFetching}
               />
-              {interviewData.recordingType === "audio" ? (
-                <VoiceRecorder
-                  questionId={selectedQuestion.id}
-                  selectedQuestion={selectedQuestion.question_text}
-                  user={user}
-                  interviewData={interviewData}
-                  onRecordingComplete={() => {
-                    setIsQuestionAnswered(true);
-                    setIsUploading(false);
-                  }}
-                  setIsUploading={setIsUploading}
-                  setResults={setResults}
-                />
-              ) : (
-                <VideoRecorder
-                  selectedQuestion={selectedQuestion.question_text}
-                  questionId={selectedQuestion.id}
-                  user={user}
-                  onRecordingComplete={() => {
-                    setIsQuestionAnswered(true);
-                    setIsUploading(false);
-                  }}
-                  setIsUploading={setIsUploading}
-                  isUploading={isUploading}
-                />
-              )}
+
+              <VideoRecorder
+                selectedQuestion={selectedQuestion.question_text}
+                questionId={selectedQuestion.id}
+                user={user}
+                onRecordingComplete={onRecordingComplete}
+                onRecordingStart={onRecordingStart}
+              />
             </div>
           )}
 
-          {step === 6 && !selectedQuestion && (
+          {step === 5 && !selectedQuestion && (
             <div className="space-y-4 transition-opacity duration-500">
               {isQuestionFetching ? (
                 <>
@@ -401,17 +379,17 @@ const Interview = () => {
           )}
         </CardContent>
         <CardFooter>
-          {(isUploading || isQuestionAnswered) && (
+          {(state.isUploading || state.isQuestionAnswered) && (
             <Button
-              variant={isUploading ? "outline" : "default"}
-              disabled={isUploading}
+              variant={state.isUploading ? "outline" : "default"}
+              disabled={state.isUploading}
               className={`w-full transition-opacity duration-500 ease-in-out ${
-                isUploading
+                state.isUploading
                   ? "bg-secondary-orange text-black-100 hover:bg-secondary-orange/90"
                   : "bg-primary-blue text-primary-blue-100 hover:bg-secondary-orange"
               }`}
             >
-              {isUploading ? (
+              {state.isUploading ? (
                 <>
                   <Cloud className="mr-2 h-4 w-4" /> Uploading...
                 </>
