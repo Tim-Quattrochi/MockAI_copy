@@ -3,17 +3,10 @@
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { fetchFile } from "@ffmpeg/util";
 import { useRef, useState, useEffect } from "react";
-import { useUser } from "./useUser";
 import { v4 as uuid } from "uuid";
-import axios from "axios";
+import { uploadAudio } from "@/app/interview/actions";
 import { Question } from "@/types";
 import { User } from "@supabase/supabase-js";
-
-declare global {
-  interface Window {
-    webkitSpeechRecognition: any;
-  }
-}
 
 interface BlobEvent extends Event {
   data: Blob;
@@ -21,18 +14,18 @@ interface BlobEvent extends Event {
 
 interface UseVideoRecorderReturn {
   isRecording: boolean;
+  isUploading: boolean;
   recordingComplete: boolean;
   audioBlob: Blob | null;
   startRecording: () => void;
   stopRecording: () => void;
   videoUrl: string | null;
   videoBlob: Blob | null;
-  uploadAudio: (
+  handleUploadAudio: (
     user: User,
-    question: Question["question_text"],
-    questionId: Question["id"]
-  ) => Promise<void>;
-  transcript: string | null;
+    questionId: string,
+    question: string
+  ) => void;
 }
 
 export const useVideoRecorder = (
@@ -43,22 +36,17 @@ export const useVideoRecorder = (
   const [recordingComplete, setRecordingComplete] = useState(false);
   const [videoUrl, setVideoUrl] = useState<string | null>(null); // For the temporary front-end URL
   const [videoBlob, setVideoBlob] = useState<Blob | null>(null); // The video Blob itself
-  const [transcript, setTranscript] = useState("");
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null); // Blob for extracted audio
   const [hasUploaded, setHasUploaded] = useState(false);
   const [readyToUploadVideo, setReadyToUploadVideo] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   const id_unique = uuid();
-
-  const { user } = useUser();
 
   // For Media Recorder
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const videoChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
-
-  // For Speech Recognition
-  const recognitionRef = useRef<any>(null);
 
   async function initializeMediaRecorder() {
     videoChunksRef.current = [];
@@ -118,39 +106,9 @@ export const useVideoRecorder = (
     }
   }
 
-  function initializeSpeechRecognition() {
-    recognitionRef.current = new window.webkitSpeechRecognition();
-    recognitionRef.current.continuous = true;
-    recognitionRef.current.interimResults = true;
-
-    recognitionRef.current.onresult = async (event: any) => {
-      try {
-        const { transcript } =
-          event.results[event.results.length - 1][0];
-        setTranscript(transcript);
-      } catch (error) {
-        console.error(
-          "Error handling speech recognition result:",
-          error
-        );
-      }
-    };
-
-    recognitionRef.current.onerror = (event: any) => {
-      console.error("Speech recognition error:", event.error);
-    };
-
-    try {
-      recognitionRef.current.start();
-    } catch (error) {
-      console.error("Error starting speech recognition:", error);
-    }
-  }
-
   const startRecording = () => {
     setIsRecording(true);
     initializeMediaRecorder();
-    initializeSpeechRecognition();
   };
 
   const stopRecording = async () => {
@@ -160,9 +118,6 @@ export const useVideoRecorder = (
       mediaRecorderRef.current.stream
         .getTracks()
         .forEach((track) => track.stop());
-    }
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
     }
 
     if (streamRef.current) {
@@ -199,12 +154,16 @@ export const useVideoRecorder = (
 
     const fileData = await ffmpeg.readFile(`${id_unique}.mp3`);
 
-    const output = new Blob([fileData], { type: "audio/mp3" });
+    const output = new File([fileData], `${id_unique}.mp3`, {
+      type: "audio/mpeg",
+    });
+
+    console.log("Extracted audio:", output);
 
     return output;
   }
 
-  const uploadAudio = async (
+  const handleUploadAudio = async (
     user: User,
     question: string,
     questionId: string
@@ -215,35 +174,39 @@ export const useVideoRecorder = (
       return;
     }
 
-    // I am extracting the audio from the video
-    const file = await handleAudioExtraction(audioBlob);
-
-    const formData = new FormData();
-    formData.append("file", audioBlob, `${id_unique}.mp3`);
-    formData.append("fileName", `${id_unique}.webm`);
-    if (videoBlob) {
-      formData.append(
-        "videoFile",
-        videoBlob,
-        `video_${Date.now()}.webm`
-      );
-    }
-    formData.append("audio", file, `${id_unique}.mp3`);
-    formData.append("user", user?.email ?? "");
-    formData.append("question", question);
-    formData.append("questionId", questionId);
+    setIsUploading(true);
 
     try {
-      const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_APP_URL}/api/audio/upload`,
-        formData,
-        {
-          headers: { "Content-Type": "multipart/form-data" },
-        }
+      // I am extracting the audio from the video
+      const file = await handleAudioExtraction(audioBlob);
+
+      const formData = new FormData();
+      formData.append(
+        "extractedAudioFile",
+        audioBlob,
+        `${id_unique}.mp3`
       );
-      console.log("Audio uploaded successfully:", response.data);
+      formData.append("fileName", `${id_unique}.mp3`);
+
+      if (videoBlob) {
+        formData.append("videoFile", videoBlob);
+      }
+
+      formData.append("user", user?.email ?? "");
+      formData.append("question", question);
+      formData.append("questionId", questionId);
+
+      const response = await uploadAudio(formData);
+
+      if (response.success) {
+        setHasUploaded(true);
+      } else {
+        console.error("Error uploading audio:", response.error);
+      }
     } catch (error) {
       console.error("Error uploading audio:", error);
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -255,9 +218,6 @@ export const useVideoRecorder = (
 
   useEffect(() => {
     return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
       if (streamRef.current) {
         streamRef.current
           .getTracks()
@@ -274,13 +234,13 @@ export const useVideoRecorder = (
 
   return {
     isRecording,
+    isUploading,
     recordingComplete,
     startRecording,
     stopRecording,
     videoUrl, // Front-end temporary video URL
-    transcript,
     audioBlob, // Extracted audio Blob
-    uploadAudio, // Function to call to upload the audio
+    handleUploadAudio, // Function to call to upload the audio
     videoBlob,
   };
 };

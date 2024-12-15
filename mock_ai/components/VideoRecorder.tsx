@@ -1,10 +1,13 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
 import { useVideoRecorder } from "@/hooks/useVideoRecorder";
+import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { Button } from "./ui/Button";
+import CircularProgress from "./ui/CircularProgress";
 import { Card, CardHeader, CardTitle, CardContent } from "./ui/card";
 import { Mic, Pause, Video, Rocket, CircleStop } from "lucide-react";
 import { useTimer } from "@/hooks/useTimer";
+import { useToast } from "@/hooks/useToast";
 import { Question } from "@/types";
 import { User } from "@supabase/supabase-js";
 
@@ -13,8 +16,7 @@ interface VideoRecorderProps {
   questionId: Question["id"];
   user: User;
   onRecordingComplete: () => void;
-  setIsUploading: (isUploading: boolean) => void;
-  isUploading: boolean;
+  onRecordingStart: () => void;
 }
 
 export default function VideoRecorder({
@@ -22,51 +24,82 @@ export default function VideoRecorder({
   questionId,
   user,
   onRecordingComplete,
-  setIsUploading,
-  isUploading,
+  onRecordingStart,
 }: VideoRecorderProps) {
+  const [isLoading, setIsLoading] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const {
     isRecording,
+    isUploading,
     startRecording,
     stopRecording,
     videoUrl,
-    uploadAudio,
-    transcript,
+    handleUploadAudio,
     videoBlob,
     audioBlob,
   } = useVideoRecorder(videoRef, selectedQuestion);
 
-  const [isLoading, setIsLoading] = useState(false);
+  const { startRecognition, stopRecognition, transcript } =
+    useSpeechRecognition();
+
+  const { toast, dismiss } = useToast();
 
   const handleToggleRecording = async () => {
     if (isRecording) {
-      setIsLoading(true);
-      stopRecording();
+      handleStopRecording();
 
-      setIsLoading(false);
       videoRef.current?.scrollIntoView({ behavior: "smooth" });
     } else {
-      startRecording();
+      handleStartRecording();
       videoRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   };
 
+  const { time, startTimer, stopTimer, resetTimer } = useTimer({
+    onTimeWarning: () => showToast(),
+    onTimeUp: () => {
+      handleToggleRecording();
+    },
+  });
+
+  const handleStopRecording = () => {
+    stopRecording();
+    stopRecognition();
+    stopTimer();
+  };
+
+  const handleStartRecording = () => {
+    startRecording();
+    startRecognition();
+    startTimer();
+  };
+
+  const showToast = () => {
+    const myToast = toast({
+      title: "Your time is almost up!",
+      description:
+        "You have 30 seconds left to record your thoughts.",
+      variant: "default",
+    });
+
+    setTimeout(() => {
+      dismiss(myToast.id);
+    }, 5000);
+  };
+
   useEffect(() => {
     const uploadBlobs = async () => {
-      setIsUploading(true);
-
       if (videoBlob && audioBlob) {
         try {
-          await uploadAudio(user, selectedQuestion, questionId); // Upload extracted audio
+          await handleUploadAudio(user, selectedQuestion, questionId); // Upload extracted audio
           onRecordingComplete();
           setIsLoading(false);
           videoRef.current?.scrollIntoView({ behavior: "smooth" });
         } catch (error) {
-          setIsLoading(false);
-          setIsUploading(false);
           console.error("Error uploading blobs:", error);
+        } finally {
+          onRecordingComplete();
         }
       }
     };
@@ -80,17 +113,27 @@ export default function VideoRecorder({
     <div className="bg-[#050614] text-white p-6 flex items-center justify-center flex-grow min-h-[25vh] max-w-2xl mx-auto">
       <div className="w-full max-w-3xl flex-grow">
         {(isRecording || transcript) && (
-          <Card className="bg-[#0a0b24] border-[#2e2f61] mb-8">
+          <Card className="bg-[#1E!F3B] border-[#2e2f61] mb-8">
             <CardHeader>
               <CardTitle className="flex justify-between items-center">
-                <span className="text-[#7fceff]">
+                <span className="text-[#7ECEFE]">
                   {isRecording ? "Recording" : "Recorded"}
                 </span>
                 {isRecording && (
-                  <span className="flex items-center">
-                    <span className="animate-pulse mr-2 h-3 w-3 rounded-full bg-[#ff6db3]"></span>
-                    Live
-                  </span>
+                  <div className="flex justify-end items-center space-x-4">
+                    <span className="flex items-center">
+                      <span className="animate-pulse mx-2 h-3 w-3 inline-block rounded-full bg-[#C32047]"></span>
+                      Live
+                    </span>
+
+                    <CircularProgress
+                      radius={35}
+                      stroke={5}
+                      progress={Number(time)}
+                      maxTime={180}
+                      formattedTime={time}
+                    />
+                  </div>
                 )}
               </CardTitle>
             </CardHeader>
@@ -100,6 +143,7 @@ export default function VideoRecorder({
                   ? "What are your thoughts on this question?"
                   : "Thank you for your interview."}
               </p>
+
               {transcript && (
                 <div className="bg-[#131538] rounded-md p-4 mb-4">
                   <p className="text-[#f0f0f0]">{transcript}</p>
@@ -114,6 +158,7 @@ export default function VideoRecorder({
                   muted
                   crossOrigin="anonymous"
                   onError={() => console.error("Error loading video")}
+                  onEnded={() => console.log("Video ended")}
                 >
                   <source src={videoUrl ?? ""} type="video/webm" />
                   Your browser does not support the video tag.
@@ -130,7 +175,7 @@ export default function VideoRecorder({
         <div className="flex flex-col items-center mb-8">
           <Button
             onClick={handleToggleRecording}
-            disabled={isUploading}
+            disabled={isLoading}
             className={`rounded-full p-8 transition-all duration-300 ${
               isUploading
                 ? "bg-[#ff6db3] text-[#050614] cursor-not-allowed"

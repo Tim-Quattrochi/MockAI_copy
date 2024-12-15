@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 
 type SpeechRecognition = typeof window.webkitSpeechRecognition;
 
@@ -13,13 +13,8 @@ interface SpeechRecognitionEvent extends Event {
   };
 }
 
-interface UseSpeechRecognitionProps {
-  onResult: (transcript: string) => void;
-}
-
-export function useSpeechRecognition({
-  onResult,
-}: UseSpeechRecognitionProps) {
+export function useSpeechRecognition() {
+  const [transcript, setTranscript] = useState<string | null>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   const startRecognition = () => {
@@ -34,7 +29,7 @@ export function useSpeechRecognition({
     ) => {
       const { transcript } =
         event.results[event.results.length - 1][0];
-      onResult(transcript);
+      setTranscript(transcript);
     };
 
     recognitionRef.current.start();
@@ -44,5 +39,5 @@ export function useSpeechRecognition({
     recognitionRef.current?.stop();
   };
 
-  return { startRecognition, stopRecognition };
+  return { startRecognition, stopRecognition, transcript };
 }
