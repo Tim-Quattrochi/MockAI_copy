@@ -2,11 +2,25 @@
 
 import { createClient } from "@/supabase/server";
 import { TranscriptionAnalysisResponse } from "@/utils/transcriptionUtils";
+import { AnalysisResult } from "@/utils/transcriptionUtils";
 import {
   GoogleAIFileManager,
   FileState,
 } from "@google/generative-ai/server";
 import { writeFileSync } from "fs";
+
+type UploadAudioSuccess = {
+  success: true;
+  signedUrl: string;
+  transcription: AnalysisResult;
+};
+
+type UploadAudioError = {
+  success: false;
+  error: string;
+};
+
+type UploadAudioResponse = UploadAudioSuccess | UploadAudioError;
 
 async function uploadAndProcessFile(
   fileManager: GoogleAIFileManager,
@@ -17,6 +31,8 @@ async function uploadAndProcessFile(
     mimeType,
     displayName: videoFilePath.split("/").pop(),
   });
+
+  console.log("file path: ", videoFilePath);
 
   console.log(
     "upload result from file manager utils: ",
@@ -41,7 +57,9 @@ async function uploadAndProcessFile(
   return uploadResult;
 }
 
-export async function uploadAudio(formData: FormData) {
+export async function uploadAudio(
+  formData: FormData
+): Promise<UploadAudioResponse> {
   try {
     const supabase = await createClient();
     const {
@@ -52,7 +70,8 @@ export async function uploadAudio(formData: FormData) {
       throw new Error("User not authenticated");
     }
 
-    const file = formData.get("file") as File;
+    const file = formData.get("extractedAudioFile") as File;
+    const videoFile = formData.get("videoFile") as File;
     const fileName = formData.get("fileName") as string;
     const questionId = formData.get("questionId") as string;
     const userEmail = formData.get("user") as string;
@@ -62,30 +81,34 @@ export async function uploadAudio(formData: FormData) {
     const position = formData.get("position") as string;
     const questionType = formData.get("questionType") as string;
 
-    const audioPath = `${authedUser.id}/${fileName}`;
-    const { error: audioError } = await supabase.storage
-      .from("audio-interviews")
-      .upload(audioPath, file, {
-        contentType: "audio/webm",
+    if (!file) {
+      throw new Error("No extracted audio to upload.");
+    }
+
+    const videoPath = `${authedUser.id}/video_${Date.now()}.webm`;
+
+    const { data: _, error: videoError } = await supabase.storage
+      .from("video-interviews")
+      .upload(videoPath, videoFile, {
+        contentType: videoFile.type,
         upsert: false,
       });
 
-    if (audioError) throw audioError;
+    if (videoError) throw videoError;
 
-    const { data: audioUrlData } = await supabase.storage
-      .from("audio-interviews")
-      .createSignedUrl(audioPath, 120 * 120);
+    const { data: videoUrlData } = await supabase.storage
+      .from("video-interviews")
+      .createSignedUrl(videoPath, 120 * 120);
 
-    const signedUrl = audioUrlData?.signedUrl;
+    const signedUrl = videoUrlData?.signedUrl;
     if (!signedUrl) throw new Error("Failed to generate signed URL");
+    console.log("FILE from actions: ", file);
 
-    const response = await fetch(signedUrl);
-    const arrayBuffer = await response.arrayBuffer();
+    const arrayBuffer = await file.arrayBuffer();
+    console.log("Array buffer: ", arrayBuffer);
     const buffer = Buffer.from(arrayBuffer);
-    const uniqueFileName = `${Date.now()}-${Math.random()
-      .toString(36)
-      .substring(2, 15)}.webm`;
-    const tmpPath = `/tmp/${uniqueFileName}`;
+
+    const tmpPath = `/tmp/${fileName}`;
 
     writeFileSync(tmpPath, buffer);
 
@@ -95,7 +118,7 @@ export async function uploadAudio(formData: FormData) {
     const genaiUploadedFile = await uploadAndProcessFile(
       fileManager,
       tmpPath,
-      "audio/webm"
+      "audio/mpeg"
     );
 
     const transcriptionResponse = await fetch(
@@ -121,9 +144,10 @@ export async function uploadAudio(formData: FormData) {
     const transcriptionData: TranscriptionAnalysisResponse =
       await transcriptionResponse.json();
 
+    // update the results table with the video url.
     await supabase
       .from("results")
-      .update({ audio_url: signedUrl })
+      .update({ video_url: signedUrl })
       .eq("question_id", questionId);
 
     return {
