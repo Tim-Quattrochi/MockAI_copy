@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useVideoRecorder } from "@/hooks/useVideoRecorder";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { Button } from "./ui/Button";
@@ -15,33 +15,40 @@ interface VideoRecorderProps {
   selectedQuestion: Question["question_text"];
   questionId: Question["id"];
   user: User;
-  onRecordingComplete: () => void;
-  onRecordingStart: () => void;
+  onUploadStatusChange: (status: boolean) => void;
 }
 
 export default function VideoRecorder({
   selectedQuestion,
   questionId,
   user,
-  onRecordingComplete,
-  onRecordingStart,
+  onUploadStatusChange,
 }: VideoRecorderProps) {
-  const [isLoading, setIsLoading] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const {
     isRecording,
-    isUploading,
+    uploadStatus,
     startRecording,
     stopRecording,
     videoUrl,
     handleUploadAudio,
     videoBlob,
     audioBlob,
-  } = useVideoRecorder(videoRef, selectedQuestion);
+  } = useVideoRecorder(videoRef);
 
-  const { startRecognition, stopRecognition, transcript } =
-    useSpeechRecognition();
+  const { status, error: uploadError, message } = uploadStatus;
+
+  const isUploading = status === "loading";
+
+  const {
+    startRecognition,
+    stopRecognition,
+    transcript,
+    error: speechError,
+    resetTranscript,
+    isSpeechRecognitionSupported,
+  } = useSpeechRecognition();
 
   const { toast, dismiss } = useToast();
 
@@ -70,6 +77,17 @@ export default function VideoRecorder({
   };
 
   const handleStartRecording = () => {
+    if (!isSpeechRecognitionSupported) {
+      toast({
+        title: "Browser Not Supported",
+        description:
+          "Speech recognition is not supported in your browser",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    resetTranscript();
     startRecording();
     startRecognition();
     startTimer();
@@ -93,13 +111,11 @@ export default function VideoRecorder({
       if (videoBlob && audioBlob) {
         try {
           await handleUploadAudio(user, selectedQuestion, questionId); // Upload extracted audio
-          onRecordingComplete();
-          setIsLoading(false);
+          onUploadStatusChange(true);
           videoRef.current?.scrollIntoView({ behavior: "smooth" });
         } catch (error) {
           console.error("Error uploading blobs:", error);
-        } finally {
-          onRecordingComplete();
+          onUploadStatusChange(false);
         }
       }
     };
@@ -107,7 +123,32 @@ export default function VideoRecorder({
     if (videoBlob && audioBlob) {
       uploadBlobs();
     }
-  }, [videoBlob, audioBlob]);
+  }, [
+    videoBlob,
+    audioBlob,
+    handleUploadAudio,
+    user,
+    selectedQuestion,
+    questionId,
+    onUploadStatusChange,
+  ]);
+
+  useEffect(() => {
+    if (speechError) {
+      toast({
+        title: "Speech Recognition Error",
+        description: speechError.message,
+        variant: "destructive",
+      });
+    }
+    if (uploadError) {
+      toast({
+        title: "Upload Error",
+        description: uploadError.message,
+        variant: "destructive",
+      });
+    }
+  }, [speechError, uploadError, toast]);
 
   return (
     <div className="bg-[#050614] text-white p-6 flex items-center justify-center flex-grow min-h-[25vh] max-w-2xl mx-auto">
@@ -145,8 +186,13 @@ export default function VideoRecorder({
               </p>
 
               {transcript && (
-                <div className="bg-[#131538] rounded-md p-4 mb-4">
-                  <p className="text-[#f0f0f0]">{transcript}</p>
+                <div className="bg-[#131538] rounded-md p-4 mb-4 overflow-y-auto max-h-48 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
+                  <p className="text-[#f0f0f0] whitespace-pre-wrap">
+                    {transcript}
+                    {isRecording && (
+                      <span className="inline-block w-1 h-4 ml-1 bg-[#FE7E7E] animate-pulse" />
+                    )}
+                  </p>
                 </div>
               )}
               <div className="aspect-w-16 aspect-h-9 bg-[#131538] rounded-lg overflow-hidden max-w-full">
@@ -157,8 +203,6 @@ export default function VideoRecorder({
                   controls
                   muted
                   crossOrigin="anonymous"
-                  onError={() => console.error("Error loading video")}
-                  onEnded={() => console.log("Video ended")}
                 >
                   <source src={videoUrl ?? ""} type="video/webm" />
                   Your browser does not support the video tag.
@@ -175,7 +219,7 @@ export default function VideoRecorder({
         <div className="flex flex-col items-center mb-8">
           <Button
             onClick={handleToggleRecording}
-            disabled={isLoading}
+            disabled={isUploading}
             className={`rounded-full p-8 transition-all duration-300 ${
               isUploading
                 ? "bg-[#ff6db3] text-[#050614] cursor-not-allowed"
@@ -193,7 +237,7 @@ export default function VideoRecorder({
           >
             {isUploading ? (
               <>
-                <Rocket className="h-8 w-8 text-[#7fceff] animate-bounce" />
+                <Rocket className="h-8 w-8 text-[#FE7ECE] animate-bounce" />
                 <span className="ml-2">Uploading...</span>
               </>
             ) : isRecording ? (
@@ -202,32 +246,6 @@ export default function VideoRecorder({
               <Mic className="h-8 w-8 text-[#050614]" />
             )}
           </Button>
-
-          {isLoading && (
-            <div className="mt-4 flex items-center space-x-2 text-[#7fceff]">
-              <svg
-                className="animate-spin h-5 w-5"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
-              <span>Uploading...</span>
-            </div>
-          )}
         </div>
       </div>
     </div>
