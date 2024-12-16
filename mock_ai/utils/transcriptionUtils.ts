@@ -14,17 +14,11 @@ export interface FillerWord {
   count: number;
 }
 
-export interface LongPause {
-  start: number;
-  end: number;
-  duration: number;
-}
-
 export interface TranscriptionResponse {
   transcript: string;
   words: WordInfo[];
   filler_words: FillerWord[];
-  long_pauses: LongPause[];
+  long_pauses: number[];
   pause_durations: number[];
   interviewer_question: string;
   positive_sentiment_score: number;
@@ -39,16 +33,7 @@ export interface TranscriptionAnalysisResponse {
 }
 
 export interface AnalysisResult {
-  fillerWordCount: { [key: string]: number };
-  longPauses: string[];
-  transcript: string;
-  words: WordInfo[];
-  filler_words: FillerWord[];
-  long_pauses: LongPause[];
   score: number;
-  ai_feedback?: string;
-  pause_durations: number[];
-  interviewer_question?: string;
 }
 
 interface ScoreParameters {
@@ -79,8 +64,8 @@ export function calculateScore(
     negative_sentiment_score +
     neutral_sentiment_score * 0.5;
 
-  const fillerWordWeight = 1;
-  const pauseWeight = 1;
+  const fillerWordWeight = 3;
+  const pauseWeight = 2;
   const sentimentWeight = 1;
 
   return (
@@ -99,31 +84,27 @@ export async function analyzeAudio(
   }
 
   const {
-    transcript,
-    words,
     filler_words,
     pause_durations,
-    interviewer_question,
     positive_sentiment_score,
     negative_sentiment_score,
     neutral_sentiment_score,
   } = response;
 
   const fillerWordCount: { [key: string]: number } = {};
-  response?.filler_words.forEach((item) => {
+  filler_words.forEach((item) => {
     fillerWordCount[item.word] = item.count;
   });
 
-  const longPauseCount = (pause_durations ?? []).filter(
-    (pause) => pause >= 10
-  ).length;
+  const validPauseDurations = pause_durations.filter(
+    (pause) => pause > 5 && Number.isInteger(pause)
+  );
 
-  const pauses = (pause_durations || []).map((pause) => {
-    if (typeof pause !== "number") {
-      throw new Error("Invalid pause data");
-    }
-    return `${pause.toFixed(2)} seconds`;
-  });
+  const longPauseCount = validPauseDurations.length;
+
+  console.log("Valid pause durations: ", validPauseDurations);
+  console.log("pause_durations: ", pause_durations);
+  console.log("longPauseCount: ", longPauseCount);
 
   const score = calculateScore(
     {
@@ -133,21 +114,8 @@ export async function analyzeAudio(
       negative_sentiment_score,
       neutral_sentiment_score,
     },
-    10
+    100
   );
 
-  const result: AnalysisResult = {
-    fillerWordCount: fillerWordCount,
-    transcript: transcript,
-    words: words,
-    filler_words: filler_words,
-    long_pauses: response.long_pauses,
-    longPauses: pauses,
-    pause_durations: pause_durations,
-    score: score,
-    interviewer_question: interviewer_question,
-    ai_feedback: response.ai_feedback,
-  };
-
-  return result;
+  return { score };
 }
