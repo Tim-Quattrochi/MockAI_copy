@@ -1,6 +1,11 @@
 "use client";
 import React, { useState } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../ui/Tabs";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Button } from "../ui/Button";
 import Link from "next/link";
 
@@ -25,9 +30,19 @@ const HeroTabs = () => {
         </Link>
       </TabsContent>
       <TabsContent value="businesses">
-        <Button className="w-full bg-[#5ebbff] text-[#0a0b2e] hover:bg-[#5ebbff]/90">
-          Streamline Your Hiring
-        </Button>
+        <Popover>
+          <PopoverTrigger asChild>
+            <div>
+              <Button
+                disabled
+                className="w-full bg-[#5ebbff] text-[#0a0b2e] hover:bg-[#5ebbff]/90"
+              >
+                Streamline Your Hiring
+              </Button>
+            </div>
+          </PopoverTrigger>
+          <PopoverContent>coming soon.</PopoverContent>
+        </Popover>
       </TabsContent>
     </Tabs>
   );
