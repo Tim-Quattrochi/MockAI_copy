@@ -1,20 +1,26 @@
 "use client";
 
+import { useCallback } from "react";
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { fetchFile } from "@ffmpeg/util";
 import { useRef, useState, useEffect } from "react";
 import { v4 as uuid } from "uuid";
 import { uploadAudio } from "@/app/interview/actions";
-import { Question } from "@/types";
 import { User } from "@supabase/supabase-js";
 
 interface BlobEvent extends Event {
   data: Blob;
 }
 
+interface UploadStatus {
+  status: "idle" | "loading" | "error";
+  message: string;
+  error: Error | null;
+}
+
 interface UseVideoRecorderReturn {
   isRecording: boolean;
-  isUploading: boolean;
+  uploadStatus: UploadStatus;
   recordingComplete: boolean;
   audioBlob: Blob | null;
   startRecording: () => void;
@@ -29,19 +35,20 @@ interface UseVideoRecorderReturn {
 }
 
 export const useVideoRecorder = (
-  videoRef: React.RefObject<HTMLVideoElement | null>,
-  selectedQuestion: Question["question_text"]
+  videoRef: React.RefObject<HTMLVideoElement | null>
 ): UseVideoRecorderReturn => {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingComplete, setRecordingComplete] = useState(false);
   const [videoUrl, setVideoUrl] = useState<string | null>(null); // For the temporary front-end URL
   const [videoBlob, setVideoBlob] = useState<Blob | null>(null); // The video Blob itself
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null); // Blob for extracted audio
-  const [hasUploaded, setHasUploaded] = useState(false);
-  const [readyToUploadVideo, setReadyToUploadVideo] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<UploadStatus>({
+    status: "idle",
+    message: "",
+    error: null,
+  });
 
-  const id_unique = uuid();
+  const id_unique = useRef(uuid()).current;
 
   // For Media Recorder
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -73,19 +80,16 @@ export const useVideoRecorder = (
           type: "video/webm",
         });
 
-        setVideoBlob(videoBlob); // Ensure videoBlob is set properly
+        setVideoBlob(videoBlob);
         const videoUrl = URL.createObjectURL(videoBlob);
-        setVideoUrl(videoUrl); // Set a front-end URL for preview
-
-        console.log("Video Blob:", videoBlob); // Should output a Blob object
-        console.log("Video URL:", videoUrl);
+        setVideoUrl(videoUrl);
 
         // Extract audio from video
         const extractedAudioBlob = await handleAudioExtraction(
           videoBlob
         );
-        console.log("Extracted audioBlob:", extractedAudioBlob); // Debugging log
-        setAudioBlob(extractedAudioBlob); // Set audio Blob for upload
+
+        setAudioBlob(extractedAudioBlob);
 
         mediaRecorder.removeEventListener(
           "dataavailable",
@@ -158,63 +162,83 @@ export const useVideoRecorder = (
       type: "audio/mpeg",
     });
 
-    console.log("Extracted audio:", output);
-
     return output;
   }
 
-  const handleUploadAudio = async (
-    user: User,
-    question: string,
-    questionId: string
-  ) => {
-    console.log("FIRED");
-    if (!audioBlob) {
-      console.error("No audio to upload.");
-      return;
-    }
+  const handleUploadAudio = useCallback(
+    async (user: User, question: string, questionId: string) => {
+      if (!audioBlob || !videoBlob) {
+        console.error(
+          "No audio to upload or video available to upload."
+        );
 
-    setIsUploading(true);
-
-    try {
-      // I am extracting the audio from the video
-      const file = await handleAudioExtraction(audioBlob);
-
-      const formData = new FormData();
-      formData.append(
-        "extractedAudioFile",
-        audioBlob,
-        `${id_unique}.mp3`
-      );
-      formData.append("fileName", `${id_unique}.mp3`);
-
-      if (videoBlob) {
-        formData.append("videoFile", videoBlob);
+        return;
       }
 
-      formData.append("user", user?.email ?? "");
-      formData.append("question", question);
-      formData.append("questionId", questionId);
+      setUploadStatus((prevState) => ({
+        ...prevState,
+        status: "loading",
+        message: "Uploading...",
+        error: null,
+      }));
 
-      const response = await uploadAudio(formData);
+      try {
+        const formData = new FormData();
+        formData.append(
+          "extractedAudioFile",
+          audioBlob,
+          `${id_unique}.mp3`
+        );
+        formData.append("fileName", `${id_unique}.mp3`);
 
-      if (response.success) {
-        setHasUploaded(true);
-      } else {
-        console.error("Error uploading audio:", response.error);
+        if (videoBlob) {
+          formData.append("videoFile", videoBlob);
+        }
+
+        formData.append("user", user?.email ?? "");
+        formData.append("question", question);
+        formData.append("questionId", questionId);
+
+        const res = await uploadAudio(formData);
+
+        if (res.success) {
+          setUploadStatus((prevState) => ({
+            ...prevState,
+            status: "idle",
+            message: "Upload successful",
+            error: null,
+          }));
+        } else {
+          setUploadStatus((prevState) => ({
+            ...prevState,
+            status: "error",
+            message: "Error uploading audio",
+            error: new Error(res.error),
+          }));
+        }
+      } catch (error) {
+        console.error("Error uploading audio:", error);
+        setUploadStatus((prevState) => ({
+          ...prevState,
+          status: "error",
+          message: "Error uploading audio",
+          error:
+            error instanceof Error
+              ? error
+              : new Error("Unknown error"),
+        }));
+      } finally {
+        setUploadStatus((prevState) => {
+          if (prevState.status === "loading") {
+            return { ...prevState, status: "idle" };
+          }
+
+          return prevState;
+        });
       }
-    } catch (error) {
-      console.error("Error uploading audio:", error);
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (videoBlob && !hasUploaded && selectedQuestion.trim() !== "") {
-      setReadyToUploadVideo(true);
-    }
-  }, [videoBlob, selectedQuestion]);
+    },
+    [audioBlob, videoBlob, id_unique]
+  );
 
   useEffect(() => {
     return () => {
@@ -234,7 +258,7 @@ export const useVideoRecorder = (
 
   return {
     isRecording,
-    isUploading,
+    uploadStatus,
     recordingComplete,
     startRecording,
     stopRecording,

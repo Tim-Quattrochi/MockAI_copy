@@ -30,18 +30,13 @@ import {
   CardHeader,
   CardTitle,
 } from "./ui/card";
-import { Cloud, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import {
   type InterviewData,
   type Question,
   type QuestionResponse,
 } from "@/types";
 import { AnalysisResult } from "@/utils/transcriptionUtils";
-
-interface InterviewState {
-  isUploading: boolean;
-  isQuestionAnswered: boolean;
-}
 
 const initialData: InterviewData = {
   name: "",
@@ -56,16 +51,9 @@ const Interview = () => {
   const [interviewData, setInterviewData] = useState(initialData);
   const [selectedQuestion, setSelectedQuestion] =
     useState<Question | null>(null);
-  const [isQuestionAnswered, setIsQuestionAnswered] = useState(false);
   const [stepVisible, setStepVisible] = useState(true);
-  const [state, setState] = useState<InterviewState>({
-    isUploading: false,
-    isQuestionAnswered: false,
-  });
-  const [results, setResults] = useState<
-    AnalysisResult | undefined
-  >();
-  const [isQuestionFetching, setIsQuestionFetching] = useState(true);
+  const [hasUploaded, setHasUploaded] = useState(false);
+  const [isQuestionFetching, setIsQuestionFetching] = useState(true); // for AnalysisCard
   const [errorMessage, setErrorMessage] = useState<string | null>(
     null
   );
@@ -74,14 +62,9 @@ const Interview = () => {
 
   const router = useRouter();
 
-  const onRecordingComplete = () => {
-    setIsQuestionAnswered(true);
-    setState((prevState) => ({ ...prevState, isUploading: false }));
-  };
-
-  const onRecordingStart = () => {
-    setState((prevState) => ({ ...prevState, isUploading: true }));
-  };
+  const handleUploadStatusChange = useCallback((status: boolean) => {
+    setHasUploaded(status);
+  }, []);
 
   useEffect(() => {
     if (user && nameRef.current) {
@@ -341,8 +324,7 @@ const Interview = () => {
                 selectedQuestion={selectedQuestion.question_text}
                 questionId={selectedQuestion.id}
                 user={user}
-                onRecordingComplete={onRecordingComplete}
-                onRecordingStart={onRecordingStart}
+                onUploadStatusChange={handleUploadStatusChange}
               />
             </div>
           )}
@@ -379,29 +361,16 @@ const Interview = () => {
           )}
         </CardContent>
         <CardFooter>
-          {(state.isUploading || state.isQuestionAnswered) && (
+          {hasUploaded && (
             <Button
-              variant={state.isUploading ? "outline" : "default"}
-              disabled={state.isUploading}
-              className={`w-full transition-opacity duration-500 ease-in-out ${
-                state.isUploading
-                  ? "bg-secondary-orange text-black-100 hover:bg-secondary-orange/90"
-                  : "bg-primary-blue text-primary-blue-100 hover:bg-secondary-orange"
-              }`}
+              variant="default"
+              disabled={!hasUploaded}
+              className="w-full transition-opacity duration-500 ease-in-out bg-primary-blue text-primary-blue-100 hover:bg-secondary-orange flex items-center justify-center opacity-100"
             >
-              {state.isUploading ? (
-                <>
-                  <Cloud className="mr-2 h-4 w-4" /> Uploading...
-                </>
-              ) : (
-                <div
-                  className="flex"
-                  onClick={handleNavigateToResults}
-                >
-                  View Results{" "}
-                  <ArrowRight className="ml-2 h-4 w-4 self-center" />
-                </div>
-              )}
+              <div className="flex" onClick={handleNavigateToResults}>
+                View Results
+                <ArrowRight className="ml-2 h-4 w-4 self-center" />
+              </div>
             </Button>
           )}
         </CardFooter>
