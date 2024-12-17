@@ -84,10 +84,36 @@ export function useSpeechRecognition(maxChars: number = 300) {
       const SpeechRecognition =
         window.SpeechRecognition || window.webkitSpeechRecognition;
 
+      // reset previous recognition instance
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+        recognitionRef.current = null;
+      }
+
       recognitionRef.current = new SpeechRecognition();
 
       recognitionRef.current.continuous = true;
       recognitionRef.current.interimResults = true;
+
+      recognitionRef.current.onerror = (event: any) => {
+        if (
+          event.error === "aborted" &&
+          /iPhone|iPad|iPod/.test(navigator.userAgent)
+        ) {
+          // iOS related
+          setTimeout(() => {
+            if (isListening) {
+              recognitionRef.current?.start();
+            }
+          }, 1000);
+          return;
+        }
+        console.error("Speech recognition error:", event.error);
+        setError(
+          new Error(`Speech recognition error: ${event.error}`)
+        );
+        setIsListening(false);
+      };
 
       recognitionRef.current.onstart = () => {
         setIsListening(true);

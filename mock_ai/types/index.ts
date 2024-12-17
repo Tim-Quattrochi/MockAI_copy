@@ -41,7 +41,7 @@ export type Result = {
   question_id: number;
   transcript: string;
   filler_words: FillerWord[];
-  pause_durations: string;
+  pause_durations: number[];
   interview_date: string;
   ai_feedback?: string;
   audio_url?: string;

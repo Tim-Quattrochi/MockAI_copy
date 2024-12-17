@@ -201,11 +201,14 @@ const Results = () => {
                     "Fantastic work! You had no pauses longer than 10 seconds. Long pauses during interviews can sometimes convey hesitation or lack of preparation, and they might make the interviewer question your confidence. By keeping your responses fluid, you demonstrated a clear, composed, and thoughtful communication style."
                   ) : (
                     <span>
-                      {results.pause_durations} pauses of 10 seconds
-                      or more detected. Consider practicing how to
-                      gather your thoughts quickly to maintain the
-                      flow of conversation and confidence in your
-                      responses.
+                      {results.pause_durations.join(", ")} pause
+                      {results.pause_durations.length > 1
+                        ? "s"
+                        : ""}{" "}
+                      of 10 seconds or more detected. Consider
+                      practicing how to gather your thoughts quickly
+                      to maintain the flow of conversation and
+                      confidence in your responses.
                     </span>
                   )}
                 </p>
