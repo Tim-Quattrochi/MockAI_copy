@@ -71,12 +71,15 @@ export default function VideoRecorder({
   });
 
   const handleStopRecording = () => {
-    stopRecording();
     stopRecognition();
-    stopTimer();
+
+    setTimeout(() => {
+      stopRecording();
+      stopTimer();
+    }, 500);
   };
 
-  const handleStartRecording = () => {
+  const handleStartRecording = async () => {
     if (!isSpeechRecognitionSupported) {
       toast({
         title: "Browser Not Supported",
@@ -87,10 +90,17 @@ export default function VideoRecorder({
       return;
     }
 
-    resetTranscript();
-    startRecording();
-    startRecognition();
-    startTimer();
+    try {
+      resetTranscript();
+      startRecording();
+
+      setTimeout(() => {
+        startRecognition();
+        startTimer();
+      }, 500);
+    } catch (error) {
+      console.error("Error starting recording:", error);
+    }
   };
 
   const showToast = () => {
