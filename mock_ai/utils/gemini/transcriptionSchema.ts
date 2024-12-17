@@ -82,7 +82,8 @@ export const schema = {
       items: {
         type: SchemaType.NUMBER,
       },
-      description: "Array of pause durations in seconds.",
+      description:
+        "Array of pause durations in seconds. (only gaps >= 5 seconds).",
       nullable: false,
     },
     ai_feedback: {

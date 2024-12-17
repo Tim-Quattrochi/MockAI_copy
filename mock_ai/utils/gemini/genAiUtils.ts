@@ -13,10 +13,10 @@ export async function generateTranscription(
   question: string
 ): Promise<TranscriptionResponse> {
   const model = genAI.getGenerativeModel({
-    model: "gemini-1.5-flash",
+    model: "gemini-1.5-flash-8b",
     generationConfig: {
-      temperature: 0.6,
-      topP: 0.95,
+      temperature: 0.4,
+      topP: 0.9,
       topK: 40,
       maxOutputTokens: 8192,
       responseMimeType: "application/json",

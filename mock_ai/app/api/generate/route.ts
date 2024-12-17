@@ -22,7 +22,11 @@ export async function POST(req: Request) {
     } = await supabase.auth.getUser();
 
     const gemini = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = gemini.getGenerativeModel({ model: "gemini-pro" });
+    const model = gemini.getGenerativeModel({
+      model: "gemini-1.5-flash-8b",
+      systemInstruction:
+        "You are an expert at job interviews who asks concise job interview questions.",
+    });
 
     const data = await req.json();
     const { name, company, position, interview_type } = data;
