@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useVideoRecorder } from "@/hooks/useVideoRecorder";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { Button } from "./ui/Button";
@@ -8,7 +8,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "./ui/card";
 import { Mic, Pause, Video, Rocket, CircleStop } from "lucide-react";
 import { useTimer } from "@/hooks/useTimer";
 import { useToast } from "@/hooks/useToast";
-import { Question } from "@/types";
+import { InterviewData, Question } from "@/types";
 import { User } from "@supabase/supabase-js";
 
 interface VideoRecorderProps {
@@ -16,6 +16,7 @@ interface VideoRecorderProps {
   questionId: Question["id"];
   user: User;
   onUploadStatusChange: (status: boolean) => void;
+  interviewData: InterviewData;
 }
 
 export default function VideoRecorder({
@@ -23,8 +24,31 @@ export default function VideoRecorder({
   questionId,
   user,
   onUploadStatusChange,
+  interviewData,
 }: VideoRecorderProps) {
+  const [isDeviceDesktop, setIsDeviceDesktop] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  const constraints = {
+    audio: true,
+    video: isDeviceDesktop
+      ? { width: 1280, height: 720, facingMode: "user" }
+      : {
+          width: 480,
+          height: 640,
+          facingMode: "user",
+        },
+  };
+
+  useEffect(() => {
+    const updateMedia = () => {
+      setIsDeviceDesktop(window.innerWidth >= 768);
+    };
+
+    updateMedia();
+    window.addEventListener("resize", updateMedia);
+    return () => window.removeEventListener("resize", updateMedia);
+  }, []);
 
   const {
     isRecording,
@@ -35,7 +59,7 @@ export default function VideoRecorder({
     handleUploadAudio,
     videoBlob,
     audioBlob,
-  } = useVideoRecorder(videoRef);
+  } = useVideoRecorder(videoRef, constraints);
 
   const { status, error: uploadError, message } = uploadStatus;
 
@@ -120,7 +144,12 @@ export default function VideoRecorder({
     const uploadBlobs = async () => {
       if (videoBlob && audioBlob) {
         try {
-          await handleUploadAudio(user, selectedQuestion, questionId); // Upload extracted audio
+          await handleUploadAudio(
+            interviewData,
+            user,
+            selectedQuestion,
+            questionId
+          ); // Upload extracted audio
           onUploadStatusChange(true);
           videoRef.current?.scrollIntoView({ behavior: "smooth" });
         } catch (error) {
@@ -141,6 +170,7 @@ export default function VideoRecorder({
     selectedQuestion,
     questionId,
     onUploadStatusChange,
+    interviewData,
   ]);
 
   useEffect(() => {

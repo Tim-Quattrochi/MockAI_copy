@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Poppins, Inter, Roboto } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import { cn } from "@/lib/utils";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -56,6 +57,7 @@ export default function RootLayout({
           <main className="flex-grow">{children}</main>
           <Toaster />
           <Footer />
+          <Analytics />
         </div>
       </body>
     </html>

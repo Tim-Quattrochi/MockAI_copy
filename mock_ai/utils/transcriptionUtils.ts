@@ -102,10 +102,6 @@ export async function analyzeAudio(
 
   const longPauseCount = validPauseDurations.length;
 
-  console.log("Valid pause durations: ", validPauseDurations);
-  console.log("pause_durations: ", pause_durations);
-  console.log("longPauseCount: ", longPauseCount);
-
   const score = calculateScore(
     {
       fillerWordCount,

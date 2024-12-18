@@ -1,20 +1,18 @@
 import { createClient } from "@/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
-import { schema as genAiResultsSchema } from "@/utils/gemini/transcriptionSchema";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import {
-  GoogleAIFileManager,
-  FileState,
-} from "@google/generative-ai/server";
 import { analyzeAudio } from "@/utils/transcriptionUtils";
 import { generateTranscription } from "@/utils/gemini/genAiUtils";
+
+function getMissingFields(fields: Record<string, any>): string[] {
+  return Object.keys(fields).filter((key) => !fields[key]);
+}
 
 export async function POST(
   request: NextRequest
 ): Promise<NextResponse> {
   try {
     const {
-      //Note to self: req data from components/VoiceRecorder
       fileUri,
       mimeType,
       questionId,
@@ -25,6 +23,30 @@ export async function POST(
       questionType,
       question_text: question,
     } = await request.json();
+
+    const missingFields = getMissingFields({
+      fileUri,
+      mimeType,
+      questionId,
+      authedUser,
+      candidateName,
+      company,
+      position,
+      questionType,
+      question,
+    });
+
+    if (missingFields.length > 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Missing required fields: ${missingFields.join(
+            ", "
+          )}`,
+        },
+        { status: 400 }
+      );
+    }
 
     const supabase = await createClient();
 
@@ -42,10 +64,12 @@ export async function POST(
 
     const analysis = await analyzeAudio(jsonResponse);
 
-    console.log("Analysis result:", analysis);
-    console.log("---------------------------");
-    console.log("---------------------------");
-    console.log("JSON response:", jsonResponse);
+    if (process.env.NODE_ENV === "development") {
+      console.log("Analysis result:", analysis);
+      console.log("---------------------------");
+      console.log("---------------------------");
+      console.log("JSON response:", jsonResponse);
+    }
 
     // update the Result table using supabase for the user.
     const { data: resultData, error: resultError } = await supabase

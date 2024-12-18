@@ -7,6 +7,7 @@ import { useRef, useState, useEffect } from "react";
 import { v4 as uuid } from "uuid";
 import { uploadAudio } from "@/app/interview/actions";
 import { User } from "@supabase/supabase-js";
+import { InterviewData } from "@/types";
 
 interface BlobEvent extends Event {
   data: Blob;
@@ -28,6 +29,7 @@ interface UseVideoRecorderReturn {
   videoUrl: string | null;
   videoBlob: Blob | null;
   handleUploadAudio: (
+    interviewData: InterviewData,
     user: User,
     questionId: string,
     question: string
@@ -35,7 +37,8 @@ interface UseVideoRecorderReturn {
 }
 
 export const useVideoRecorder = (
-  videoRef: React.RefObject<HTMLVideoElement | null>
+  videoRef: React.RefObject<HTMLVideoElement | null>,
+  constraints: MediaStreamConstraints
 ): UseVideoRecorderReturn => {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingComplete, setRecordingComplete] = useState(false);
@@ -58,10 +61,9 @@ export const useVideoRecorder = (
   async function initializeMediaRecorder() {
     videoChunksRef.current = [];
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true,
-      });
+      const stream = await navigator.mediaDevices.getUserMedia(
+        constraints
+      );
       streamRef.current = stream;
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
@@ -166,7 +168,12 @@ export const useVideoRecorder = (
   }
 
   const handleUploadAudio = useCallback(
-    async (user: User, question: string, questionId: string) => {
+    async (
+      interviewData: InterviewData,
+      user: User,
+      question: string,
+      questionId: string
+    ) => {
       if (!audioBlob || !videoBlob) {
         console.error(
           "No audio to upload or video available to upload."
@@ -174,6 +181,8 @@ export const useVideoRecorder = (
 
         return;
       }
+
+      const { name, company, position, questionType } = interviewData;
 
       setUploadStatus((prevState) => ({
         ...prevState,
@@ -194,7 +203,10 @@ export const useVideoRecorder = (
         if (videoBlob) {
           formData.append("videoFile", videoBlob);
         }
-
+        formData.append("company", company);
+        formData.append("position", position);
+        formData.append("questionType", questionType);
+        formData.append("name", name);
         formData.append("user", user?.email ?? "");
         formData.append("question", question);
         formData.append("questionId", questionId);
