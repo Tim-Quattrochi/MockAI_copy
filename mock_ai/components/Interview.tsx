@@ -36,7 +36,6 @@ import {
   type Question,
   type QuestionResponse,
 } from "@/types";
-import { AnalysisResult } from "@/utils/transcriptionUtils";
 
 const initialData: InterviewData = {
   name: "",
@@ -325,6 +324,7 @@ const Interview = () => {
                 questionId={selectedQuestion.id}
                 user={user}
                 onUploadStatusChange={handleUploadStatusChange}
+                interviewData={interviewData}
               />
             </div>
           )}

@@ -44,9 +44,9 @@ export async function POST(req: Request) {
     let prompt = "";
 
     if (interview_type === "behavioral") {
-      prompt = `You are an interviewer for a website called 'mockAI'. You are interviewing ${name} for the position of ${position} at ${company}. The interview type is a ${interview_type} interview. Ask a behavioral question that focuses on ${name}'s experience, how they manage teamwork, leadership, conflict resolution, and communication skills in professional settings. Avoid generic questions like 'what would you do in a difficult situation?'. The question should be specific to scenarios they are likely to encounter in the ${position} role. Ask ${name} to answer the question within 3 minutes. DO NOT include any markdown in your response. Address them by their name.`;
+      prompt = `As a behavioral interviewer for the ${position} position at ${company}, please generate a behavioral interview question that assesses the candidate's experiences, soft skills, and alignment with company culture.`;
     } else {
-      prompt = `You are an interviewer for a website called 'mockAI'. You are interviewing ${name} for the position of ${position} at ${company}. The interview type is a ${interview_type} interview. Ask a ${interview_type} question to ${name}. The goal of this question is to understand how ${name} handles a situation relevant to the role of ${position}. Ask ${name} to answer the question within 3 minutes. DO NOT include any markdown in your response. Address them by their name.`;
+      prompt = `As a technical interviewer for the ${position} position at ${company}, please generate a technical interview question that assesses the candidate's knowledge and problem-solving skills.`;
     }
 
     const result = await model.generateContent(prompt);

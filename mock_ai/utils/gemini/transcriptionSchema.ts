@@ -5,12 +5,13 @@ export const schema = {
   properties: {
     transcript: {
       type: SchemaType.STRING,
-      description: "The full transcribed text.",
+      description: "The full transcribed text from the audio prompt.",
       nullable: false,
     },
     interviewer_question: {
       type: SchemaType.STRING,
-      description: "The question asked by the interviewer.",
+      description:
+        "The question exactly as it was passed to the prompt.",
       nullable: false,
     },
     words: {
