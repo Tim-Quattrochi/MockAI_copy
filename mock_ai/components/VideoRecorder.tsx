@@ -235,7 +235,7 @@ export default function VideoRecorder({
                   </p>
                 </div>
               )}
-              <div className="relative w-full aspect-w-16 aspect-h-9 md:aspect-w-4 md:aspect-h-3 bg-[#131538] rounded-lg overflow-hidden ">
+              <div className="aspect-video aspect-w-16 aspect-h-9 md:aspect-w-4 md:aspect-h-3 bg-[#131538] rounded-lg overflow-hidden ">
                 <video
                   ref={videoRef}
                   key={videoUrl}
