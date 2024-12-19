@@ -7,6 +7,7 @@ import {
   useCallback,
 } from "react";
 import { useUser } from "@/hooks/useUser";
+import { defineStepper } from "@stepperize/react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import AnalysisCard from "./AnalysisCard";
@@ -15,6 +16,7 @@ import { Skeleton } from "./ui/skeleton";
 import { Button } from "./ui/Button";
 import { Label } from "./ui/label";
 import { Input } from "./ui/Input";
+import StepProgress from "./step-progress";
 import {
   Select,
   SelectContent,
@@ -36,6 +38,7 @@ import {
   type Question,
   type QuestionResponse,
 } from "@/types";
+import { cn } from "@/lib/utils";
 
 const initialData: InterviewData = {
   name: "",
@@ -43,6 +46,44 @@ const initialData: InterviewData = {
   position: "",
   questionType: "technical",
 };
+
+const { useStepper, steps } = defineStepper(
+  {
+    id: "name",
+    key: "name",
+    label: "Name",
+    description: "Your Name",
+    isCompleted: false,
+  },
+  {
+    id: "company",
+    key: "company",
+    label: "Company",
+    description: "Your Dream Company",
+    isCompleted: false,
+  },
+  {
+    id: "position",
+    key: "position",
+    label: "Position",
+    description: "Your Dream Position",
+    isCompleted: false,
+  },
+  {
+    id: "questionType",
+    key: "questionType",
+    label: "Question Type",
+    description: "Technical or Behavioral",
+    isCompleted: false,
+  },
+  {
+    id: "start interview",
+    key: "start interview",
+    label: "Start Interview",
+    description: "Start Interview",
+    isCompleted: false,
+  }
+);
 
 const Interview = () => {
   const { user, error } = useUser();
@@ -60,6 +101,8 @@ const Interview = () => {
   const nameRef = useRef<HTMLInputElement>(null);
 
   const router = useRouter();
+
+  const stepper = useStepper();
 
   const handleUploadStatusChange = useCallback((status: boolean) => {
     setHasUploaded(status);
@@ -86,7 +129,7 @@ const Interview = () => {
     );
   };
 
-  const handleInputChange = useCallback(
+  const handleChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
       const { name, value } = e.target;
       setInterviewData((prevData) => ({
@@ -97,9 +140,15 @@ const Interview = () => {
     []
   );
 
-  const handleSelectChange = (name: string, value: string) => {
-    setInterviewData({ ...interviewData, [name]: value });
-  };
+  const handleSelectChange = useCallback(
+    (name: string, value: string) => {
+      setInterviewData((prevData) => ({
+        ...prevData,
+        [name]: value,
+      }));
+    },
+    []
+  );
 
   const fetchQuestion = useCallback(async () => {
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -142,9 +191,24 @@ const Interview = () => {
   }, [user, step, selectedQuestion, fetchQuestion]);
 
   const handleNextStep = () => {
+    stepper.next();
     setStepVisible(false);
     setTimeout(() => {
       setStep(step + 1);
+      setStepVisible(true);
+    }, 500);
+  };
+
+  const handleQuitInterview = () => {
+    stepper.reset();
+    setStepVisible(false);
+    setInterviewData(initialData);
+    setSelectedQuestion(null);
+    setHasUploaded(false);
+    setErrorMessage(null);
+
+    setTimeout(() => {
+      setStep(1);
       setStepVisible(true);
     }, 500);
   };
@@ -163,8 +227,13 @@ const Interview = () => {
   }
 
   return (
-    <div className="hero flex min-h-screen flex-col items-center justify-center  p-4">
-      <Card className="w-full max-w-2xl bg-[#0a0b24]">
+    <div className="hero flex flex-col p-6 items-center justify-center">
+      <StepProgress
+        steps={steps}
+        currentStep={stepper.current.index}
+        hasUploaded={hasUploaded}
+      />
+      <Card className="w-full mt-8 max-w-2xl bg-[#0a0b24]">
         <CardHeader>
           <CardTitle className="text-2xl font-bold text-headingColor">
             {step !== 6 && "Interview Meeting Room"}
@@ -175,159 +244,107 @@ const Interview = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {step === 1 && (
-            <div
-              className={`space-y-4 transition-opacity duration-500 ${
-                !stepVisible ? "opacity-0" : "opacity-100"
-              }`}
-            >
-              <div className="space-y-2 text-white">
-                <Label htmlFor="name">Your Name</Label>
-                <Input
-                  id="name"
-                  name="name"
-                  ref={nameRef}
+          <div className="space-y-4">
+            {stepper.switch({
+              name: () => (
+                <InterviewQuestion
+                  handleChange={handleChange}
                   value={interviewData.name}
-                  onChange={handleInputChange}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === "Return") {
-                      handleNextStep();
-                    }
-                  }}
-                  className="bg-primary-blue-100 text-black-100"
+                  handleNextStep={handleNextStep}
+                  labelText={stepper.current.label}
+                  stepVisible={stepVisible}
+                  name={stepper.current.id}
                 />
-              </div>
-              <Button
-                onClick={handleNextStep}
-                tabIndex={0}
-                className="w-full bg-primary-blue text-primary-blue-100 hover:bg-secondary-orange"
-              >
-                Next <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </div>
-          )}
-
-          {step === 2 && (
-            <div
-              className={`space-y-4 transition-opacity duration-500 ${
-                !stepVisible ? "opacity-0" : "opacity-100"
-              }`}
-            >
-              <div className="space-y-2">
-                <Label htmlFor="company">Company</Label>
-                <Input
-                  id="company"
-                  name="company"
-                  value={interviewData.company}
-                  onChange={handleInputChange}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === "Return") {
-                      handleNextStep();
-                    }
-                  }}
-                  className="bg-primary-blue-100 text-black-100"
-                />
-              </div>
-              <Button
-                onClick={handleNextStep}
-                className="w-full bg-primary-blue text-primary-blue-100 hover:bg-secondary-orange"
-              >
-                Next <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </div>
-          )}
-
-          {step === 3 && (
-            <div
-              className={`space-y-4 transition-opacity duration-500 ${
-                !stepVisible ? "opacity-0" : "opacity-100"
-              }`}
-            >
-              <div className="space-y-2">
-                <Label htmlFor="position">Position</Label>
-                <Input
-                  id="position"
-                  name="position"
+              ),
+              position: () => (
+                <InterviewQuestion
+                  handleChange={handleChange}
                   value={interviewData.position}
-                  onChange={handleInputChange}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === "Return") {
-                      handleNextStep();
-                    }
-                  }}
-                  className="bg-primary-blue-100 text-black-100"
+                  handleNextStep={handleNextStep}
+                  labelText="Position"
+                  stepVisible={stepVisible}
+                  name="position"
                 />
-              </div>
-              <Button
-                onClick={handleNextStep}
-                className="w-full bg-primary-blue text-primary-blue-100 hover:bg-secondary-orange"
-              >
-                Next <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </div>
-          )}
-
-          {step === 4 && (
-            <div
-              className={` space-y-4 transition-opacity duration-500 ${
-                !stepVisible ? "opacity-0" : "opacity-100"
-              }`}
-            >
-              <div className="space-y-2 ">
-                <Label htmlFor="questionType">Question Type</Label>
-                <Select
-                  name="questionType"
+              ),
+              company: () => (
+                <InterviewQuestion
+                  handleChange={handleChange}
+                  value={interviewData.company}
+                  handleNextStep={handleNextStep}
+                  labelText={stepper.current.label}
+                  stepVisible={stepVisible}
+                  name={stepper.current.id}
+                />
+              ),
+              questionType: () => (
+                <InterviewQuestionType
+                  handleSelectChange={handleSelectChange}
                   value={interviewData.questionType}
-                  onValueChange={(value) =>
-                    handleSelectChange("questionType", value)
-                  }
+                  handleNextStep={handleNextStep}
+                  labelText={stepper.current.label}
+                  stepVisible={stepVisible}
+                  name="questionType"
+                />
+              ),
+              "start interview": () => (
+                <div
+                  className={`space-y-4 transition-opacity duration-500 ${
+                    !stepVisible ? "opacity-0" : "opacity-100"
+                  }`}
                 >
-                  <SelectTrigger className="bg-primary-blue-100 text-black-100">
-                    <SelectValue placeholder="Select question type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="technical">
-                      Technical
-                    </SelectItem>
-                    <SelectItem value="behavioral">
-                      Behavioral
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button
-                onClick={handleNextStep}
-                className="w-full bg-primary-blue text-primary-blue-100 hover:bg-secondary-orange"
-                tabIndex={1}
-                onKeyDown={handleNextStep}
-              >
-                Start Interview
-              </Button>
-            </div>
-          )}
-
-          {step === 5 && selectedQuestion && (
-            <div
-              className={`space-y-4 transition-opacity duration-500 ${
-                !stepVisible ? "opacity-0" : "opacity-100"
-              }`}
-            >
-              <AnalysisCard
-                content={selectedQuestion.question_text}
-                title="Interview Question Provided by mockAI"
-                type="question"
-                isLoading={isQuestionFetching}
-              />
-
-              <VideoRecorder
-                selectedQuestion={selectedQuestion.question_text}
-                questionId={selectedQuestion.id}
-                user={user}
-                onUploadStatusChange={handleUploadStatusChange}
-                interviewData={interviewData}
-              />
-            </div>
-          )}
+                  {selectedQuestion && (
+                    <>
+                      <AnalysisCard
+                        content={selectedQuestion.question_text}
+                        title="Interview Question Provided by mockAI"
+                        type="question"
+                        isLoading={isQuestionFetching}
+                      />
+                      <VideoRecorder
+                        selectedQuestion={
+                          selectedQuestion.question_text
+                        }
+                        questionId={selectedQuestion.id}
+                        user={user}
+                        onUploadStatusChange={
+                          handleUploadStatusChange
+                        }
+                        interviewData={interviewData}
+                      />
+                    </>
+                  )}
+                </div>
+              ),
+            })}
+            {!stepper.isLast ? (
+              <>
+                <div className="flex justify-end gap-4">
+                  <span className="mr-auto">
+                    <Button
+                      className="mr-auto bg-red-500 border-red-500 text-white hover:bg-red-600"
+                      onClick={stepper.reset}
+                      variant={`outline`}
+                    >
+                      Reset
+                    </Button>
+                  </span>
+                  <Button
+                    variant="secondary"
+                    onClick={stepper.prev}
+                    disabled={stepper.isFirst}
+                  >
+                    Back
+                  </Button>
+                  <Button onClick={handleNextStep} type="submit">
+                    {stepper.isLast ? "Start Interview" : "Next"}
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
+              </>
+            ) : (
+              ""
+            )}
+          </div>
 
           {step === 5 && !selectedQuestion && (
             <div className="space-y-4 transition-opacity duration-500">
@@ -374,9 +391,100 @@ const Interview = () => {
             </Button>
           )}
         </CardFooter>
+        {stepper.isLast && (
+          <Button
+            variant="destructive"
+            onClick={handleQuitInterview}
+            className="absolute bottom-4 right-4"
+          >
+            Cancel Interview
+          </Button>
+        )}
       </Card>
     </div>
   );
 };
 
 export default Interview;
+
+interface InterviewQuestionProps {
+  value: string;
+  handleChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleNextStep: () => void;
+  stepVisible: boolean;
+  labelText: string;
+  name: string;
+}
+
+function InterviewQuestion({
+  value,
+  labelText,
+  handleChange,
+  handleNextStep,
+  stepVisible,
+  name,
+}: InterviewQuestionProps) {
+  return (
+    <div
+      className={`space-y-4 transition-opacity duration-500 ${
+        !stepVisible ? "opacity-0" : "opacity-100"
+      }`}
+    >
+      <div className="space-y-2">
+        <Label>
+          {labelText}
+          <Input
+            id={name}
+            name={name}
+            value={value}
+            onChange={handleChange}
+            onKeyDown={(e: React.KeyboardEvent) => {
+              if (e.key === "Enter" || e.key === "Return") {
+                handleNextStep();
+              }
+            }}
+            className="bg-primary-blue-100 text-black-100"
+          />
+        </Label>
+      </div>
+    </div>
+  );
+}
+
+type InterviewQuestionTypeProps = InterviewQuestionProps & {
+  handleSelectChange: (name: string, value: string) => void;
+};
+
+function InterviewQuestionType({
+  value,
+  labelText,
+  handleSelectChange,
+  stepVisible,
+}: InterviewQuestionTypeProps) {
+  return (
+    <div
+      className={` space-y-4 transition-opacity duration-500 ${
+        !stepVisible ? "opacity-0" : "opacity-100"
+      }`}
+    >
+      <div className="space-y-2 ">
+        <Label htmlFor="questionType">{labelText}</Label>
+        <Select
+          name="questionType"
+          value={value}
+          onValueChange={(value) =>
+            handleSelectChange("questionType", value)
+          }
+        >
+          <SelectTrigger className="bg-primary-blue-100 text-black-100">
+            <SelectValue placeholder="Select question type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="technical">Technical</SelectItem>
+            <SelectItem value="behavioral">Behavioral</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+  );
+}
