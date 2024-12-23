@@ -38,7 +38,6 @@ import {
   type Question,
   type QuestionResponse,
 } from "@/types";
-import { cn } from "@/lib/utils";
 
 const initialData: InterviewData = {
   name: "",
@@ -81,6 +80,7 @@ const { useStepper, steps } = defineStepper(
     key: "start interview",
     label: "Start Interview",
     description: "Start Interview",
+    message: "Good Luck!",
     isCompleted: false,
   }
 );
@@ -97,6 +97,10 @@ const Interview = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(
     null
   );
+  const [controller, setController] =
+    useState<AbortController | null>(null);
+  const [isInterviewCanceled, setIsInterviewCanceled] =
+    useState(false);
 
   const nameRef = useRef<HTMLInputElement>(null);
 
@@ -151,8 +155,13 @@ const Interview = () => {
   );
 
   const fetchQuestion = useCallback(async () => {
+    if (isInterviewCanceled) return;
+
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
     if (!baseUrl) throw new Error("API base URL is not defined");
+
+    const abortController = new AbortController();
+    setController(abortController);
 
     setIsQuestionFetching(true);
     try {
@@ -166,6 +175,7 @@ const Interview = () => {
         },
         {
           headers: { "Content-Type": "application/json" },
+          signal: abortController.signal,
         }
       );
 
@@ -181,8 +191,9 @@ const Interview = () => {
       }
     } finally {
       setIsQuestionFetching(false);
+      setController(null);
     }
-  }, [interviewData]);
+  }, [interviewData, isInterviewCanceled]);
 
   useEffect(() => {
     if (user && step === 5 && !selectedQuestion) {
@@ -200,6 +211,10 @@ const Interview = () => {
   };
 
   const handleQuitInterview = () => {
+    if (controller) {
+      controller.abort();
+    }
+    setIsInterviewCanceled(true);
     stepper.reset();
     setStepVisible(false);
     setInterviewData(initialData);
@@ -210,8 +225,17 @@ const Interview = () => {
     setTimeout(() => {
       setStep(1);
       setStepVisible(true);
+      setIsInterviewCanceled(false);
     }, 500);
   };
+
+  useEffect(() => {
+    return () => {
+      if (controller) {
+        controller.abort();
+      }
+    };
+  }, [controller]);
 
   if (error) {
     return (
@@ -292,7 +316,7 @@ const Interview = () => {
                     !stepVisible ? "opacity-0" : "opacity-100"
                   }`}
                 >
-                  {selectedQuestion && (
+                  {selectedQuestion && !isInterviewCanceled && (
                     <>
                       <AnalysisCard
                         content={selectedQuestion.question_text}
@@ -310,6 +334,7 @@ const Interview = () => {
                           handleUploadStatusChange
                         }
                         interviewData={interviewData}
+                        isInterviewCanceled={isInterviewCanceled}
                       />
                     </>
                   )}
@@ -319,15 +344,18 @@ const Interview = () => {
             {!stepper.isLast ? (
               <>
                 <div className="flex justify-end gap-4">
-                  <span className="mr-auto">
-                    <Button
-                      className="mr-auto bg-red-500 border-red-500 text-white hover:bg-red-600"
-                      onClick={stepper.reset}
-                      variant={`outline`}
-                    >
-                      Reset
-                    </Button>
-                  </span>
+                  {step !== 1 && (
+                    <span className="mr-auto">
+                      <Button
+                        className="mr-auto bg-red-500 border-red-500 text-white hover:bg-red-600"
+                        onClick={stepper.reset}
+                        variant={`outline`}
+                      >
+                        Reset
+                      </Button>
+                    </span>
+                  )}
+
                   <Button
                     variant="secondary"
                     onClick={stepper.prev}

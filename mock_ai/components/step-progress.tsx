@@ -34,6 +34,7 @@ export default function StepProgress({
           {steps.map((step, index) => {
             const isCompleted = currentStep > index;
             const isCurrent = currentStep === index;
+            const isFinished = currentStep === steps.length - 1;
 
             return (
               <div
@@ -84,7 +85,9 @@ export default function StepProgress({
                         : "text-[#f0f0f0]"
                     )}
                   >
-                    {step.label}
+                    {isFinished && step.id === "start interview"
+                      ? step.message
+                      : step.label}
                   </span>
                 </div>
 
