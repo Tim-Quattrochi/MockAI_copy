@@ -17,6 +17,7 @@ interface VideoRecorderProps {
   user: User;
   onUploadStatusChange: (status: boolean) => void;
   interviewData: InterviewData;
+  isInterviewCanceled: boolean;
 }
 
 export default function VideoRecorder({
@@ -25,6 +26,7 @@ export default function VideoRecorder({
   user,
   onUploadStatusChange,
   interviewData,
+  isInterviewCanceled,
 }: VideoRecorderProps) {
   const [isDeviceDesktop, setIsDeviceDesktop] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -142,20 +144,21 @@ export default function VideoRecorder({
 
   useEffect(() => {
     const uploadBlobs = async () => {
-      if (videoBlob && audioBlob) {
-        try {
-          await handleUploadAudio(
-            interviewData,
-            user,
-            selectedQuestion,
-            questionId
-          ); // Upload extracted audio
-          onUploadStatusChange(true);
-          videoRef.current?.scrollIntoView({ behavior: "smooth" });
-        } catch (error) {
-          console.error("Error uploading blobs:", error);
-          onUploadStatusChange(false);
-        }
+      if (isInterviewCanceled) {
+        return;
+      }
+      try {
+        await handleUploadAudio(
+          interviewData,
+          user,
+          selectedQuestion,
+          questionId
+        ); // Upload extracted audio
+        onUploadStatusChange(true);
+        videoRef.current?.scrollIntoView({ behavior: "smooth" });
+      } catch (error) {
+        console.error("Error uploading blobs:", error);
+        onUploadStatusChange(false);
       }
     };
 
@@ -171,6 +174,7 @@ export default function VideoRecorder({
     questionId,
     onUploadStatusChange,
     interviewData,
+    isInterviewCanceled,
   ]);
 
   useEffect(() => {
