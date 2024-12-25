@@ -3,11 +3,11 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
 export async function GET(request: Request) {
   // Extract search parameters and origin from the request URL
-  const { searchParams, origin } = new URL(request.url);
+  const requestUrl = new URL(request.url);
 
   // Get the authorization code and the 'next' redirect path
-  const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/";
+  const code = requestUrl.searchParams.get("code");
+  const origin = requestUrl.origin;
 
   if (code) {
     const supabase = await createClient();
@@ -17,13 +17,9 @@ export async function GET(request: Request) {
     );
     if (error) {
       console.error("Error exchanging code for session:", error);
-      return NextResponse.redirect(`${origin}/auth/auth-code-error`);
-    }
-
-    if (!error) {
-      return NextResponse.redirect(`${origin}${next}`);
+      return NextResponse.redirect(`${origin}/error`);
     }
   }
 
-  return NextResponse.redirect(`${origin}/auth/auth-code-error`);
+  return NextResponse.redirect(`${origin}/interview`);
 }

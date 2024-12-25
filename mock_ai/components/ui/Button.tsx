@@ -23,8 +23,6 @@ const buttonVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
         signin:
           "bg-[#FFC857] text-[#0A0B2E] hover:bg-[#E6B340] px-4 py-2 font-semibold",
-        logout:
-          "bg-[#FFC857] text-[#0A0B2E] hover:bg-[#E6B340] px-4 py-2 font-semibold",
       },
       size: {
         default: "h-10 px-4 py-2",
