@@ -1,39 +1,30 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { createClient } from "@/supabase/client";
 import { Button, ButtonProps } from "@/components/ui/Button";
+import { LogOut } from "lucide-react";
 
-interface LogoutButtonProps extends ButtonProps {}
+interface LogoutButtonProps extends ButtonProps {
+  showIcon?: boolean;
+}
 
 export function LogoutButton({
   size,
   className,
-  variant = "logout",
+  variant = "ghost",
+  showIcon = true,
   ...props
 }: LogoutButtonProps) {
-  const supabase = createClient();
-  const router = useRouter();
-
-  async function handleLogout() {
-    await supabase.auth.signOut();
-    router.push("/auth/signout");
-    router.refresh();
-  }
-
   return (
-    <div>
-      <form action="/auth/signout" method="post">
-        <Button
-          variant={variant}
-          size={size}
-          className={`text-[#ff6db3] border-[#ff6db3] hover:bg-[#e888b7] rounded-md px-3 py-2 transition-colors ${className}`}
-          onClick={handleLogout}
-          {...props}
-        >
-          Sign out
-        </Button>
-      </form>
-    </div>
+    <form action="/auth/signout" method="post">
+      <Button
+        variant={variant}
+        size={size}
+        type="submit"
+        className={`text-red-600 hover:text-red-700 hover:bg-red-50 ${className}`}
+        {...props}
+      >
+        {showIcon && <LogOut className="mr-2 h-4 w-4" />}Sign out
+      </Button>
+    </form>
   );
 }

@@ -5,162 +5,75 @@
 @tailwind utilities;
 
 :root {
-  --background: 0 0% 100%;
-  --foreground: 240 10% 3.9%;
-  --card: 0 0% 100%;
-  --card-foreground: 240 10% 3.9%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 240 10% 3.9%;
-  --primary: 240 5.9% 10%;
-  --primary-foreground: 0 0% 98%;
-  --secondary: 240 4.8% 95.9%;
-  --secondary-foreground: 240 5.9% 10%;
-  --muted: 215 25% 27%;
-  --muted-foreground: 215 20% 65%;
-  --accent: 240 4.8% 95.9%;
-  --accent-foreground: 240 5.9% 10%;
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 0 0% 98%;
-  --border: 240 5.9% 90%;
-  --input: 240 5.9% 90%;
-  --ring: 240 10% 3.9%;
-  --chart-1: 12 76% 61%;
-  --chart-2: 173 58% 39%;
-  --chart-3: 197 37% 24%;
-  --chart-4: 43 74% 66%;
-  --chart-5: 27 87% 67%;
-  --radius: 0.5rem;
-}
-.dark {
-  --background: 240 10% 3.9%;
-  --foreground: 0 0% 98%;
-  --card: 240 10% 3.9%;
-  --card-foreground: 0 0% 98%;
-  --popover: 240 10% 3.9%;
-  --popover-foreground: 0 0% 98%;
-  --primary: 0 0% 98%;
-  --primary-foreground: 240 5.9% 10%;
-  --secondary: 240 3.7% 15.9%;
-  --secondary-foreground: 0 0% 98%;
-  --muted: 240 3.7% 15.9%;
-  --muted-foreground: 240 5% 64.9%;
-  --accent: 240 3.7% 15.9%;
-  --accent-foreground: 0 0% 98%;
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 0 0% 98%;
-  --border: 240 3.7% 15.9%;
-  --input: 240 3.7% 15.9%;
-  --ring: 240 4.9% 83.9%;
-  --chart-1: 220 70% 50%;
-  --chart-2: 160 60% 45%;
-  --chart-3: 30 80% 55%;
-  --chart-4: 280 65% 60%;
-  --chart-5: 340 75% 55%;
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-/* START: General styles */
-.max-width {
-  @apply max-w-[1440px] mx-auto;
-}
-
-.padding-x {
-  @apply sm:px-16 px-6;
-}
-
-.padding-y {
-  @apply py-4;
-}
-
-.flex-center {
-  @apply flex items-center justify-center;
-}
-
-.flex-between {
-  @apply flex justify-between items-center;
-}
-
-.custom-btn {
-  @apply flex flex-row relative justify-center items-center py-3 px-6 outline-none;
-}
-
-/* START: Fade-in and fade-out effects */
-.fade-in {
-  @apply opacity-0;
-  animation: fadeIn 1s forwards;
-}
-
-.fade-out {
-  animation: fadeOut 1s forwards;
-}
-
-@keyframes fadeIn {
-  to {
-    opacity: 1;
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 0, 0, 0;
+    --background-end-rgb: 0, 0, 0;
   }
 }
 
-@keyframes fadeOut {
-  to {
-    opacity: 0;
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 3.9%;
+    --primary: 0 0% 9%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 96.1%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 96.1%;
+    --muted-foreground: 0 0% 45.1%;
+    --accent: 0 0% 96.1%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 89.8%;
+    --input: 0 0% 89.8%;
+    --ring: 0 0% 3.9%;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+    --radius: 0.5rem;
+  }
+  .dark {
+    --background: 0 0% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 0 0% 14.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 14.9%;
+    --muted-foreground: 0 0% 63.9%;
+    --accent: 0 0% 14.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 0 0% 83.1%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
   }
 }
-/* END: Fade-in and fade-out effects */
 
-/* START: Hero styles */
-.hero {
-  @apply flex xl:flex-row flex-col gap-5 relative z-0 max-w-[1440px] mx-auto;
-}
-
-.hero__title {
-  @apply 2xl:text-[72px] sm:text-[64px] text-[50px] font-extrabold;
-}
-
-.hero__subtitle {
-  @apply text-[27px] text-black-100 font-light mt-5;
-}
-
-.hero__image-container {
-  @apply xl:flex-[1.5] flex justify-end items-end w-full xl:h-screen;
-}
-
-.hero__image {
-  @apply relative xl:w-full w-[90%] xl:h-full h-[590px] z-0;
-}
-
-.hero__image-overlay {
-  @apply absolute xl:-top-24 xl:-right-1/2 -right-1/4 bg-hero-bg bg-repeat-round -z-10 w-full xl:h-screen h-[590px] overflow-hidden;
-}
-/* END: Hero styles */
-
-/* START: Home styles */
-
-.home__text-container {
-  @apply flex flex-col items-start justify-start gap-y-2.5 text-black-100;
-}
-
-.home__filters {
-  @apply mt-12 w-full flex-between items-center flex-wrap gap-5;
-}
-
-.home__filter-container {
-  @apply flex justify-start flex-wrap items-center gap-2;
-}
-
-.home__error-container {
-  @apply mt-16 flex justify-center items-center flex-col gap-2;
-}
-/* END: Home styles */
-
-/* START: Result card styles */
-.result-card {
-  @apply p-4 mb-4 bg-gray-100 rounded-lg;
-}
 /* END: Result card styles */
 
 /* START: floating emoji styles */
@@ -201,10 +114,8 @@
   * {
     @apply border-border;
   }
-  label,
-  h3 {
-    @apply text-label;
-  }
+
+  
   body {
     @apply bg-background text-foreground;
   }
@@ -214,12 +125,12 @@
   .scrollbar-thin {
     scrollbar-width: thin;
   }
-  
+
   .scrollbar-thumb-gray-600::-webkit-scrollbar-thumb {
-    background-color: #4B5563;
+    background-color: #4b5563;
     border-radius: 9999px;
   }
-  
+
   .scrollbar-track-transparent::-webkit-scrollbar-track {
     background-color: transparent;
   }

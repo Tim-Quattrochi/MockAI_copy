@@ -1,4 +1,4 @@
-import { createClient } from "@//supabase/server";
+import { createClient } from "@/supabase/server";
 import { revalidatePath } from "next/cache";
 import { type NextRequest, NextResponse } from "next/server";
 
@@ -13,10 +13,8 @@ export async function POST(req: NextRequest) {
     await supabase.auth.signOut();
   }
 
-  revalidatePath("/");
+  revalidatePath("/", "layout");
   return NextResponse.redirect(new URL("/auth/signin", req.url), {
     status: 302,
   });
 }
-
-export const runtime = "edge";

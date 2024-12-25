@@ -48,17 +48,15 @@ export default function RootLayout({
         className={cn(
           "antialiased",
           inter.variable,
-          poppins.variable
+          poppins.variable,
+          "min-h-full flex flex-col"
         )}
       >
-        {" "}
-        <div className="min-h-screen flex flex-col  bg-[#0a0b2e] text-white">
-          <Header />
-          <main className="flex-grow">{children}</main>
-          <Toaster />
-          <Footer />
-          <Analytics />
-        </div>
+        <Header />
+        {children}
+        <Toaster />
+        <Footer />
+        <Analytics />
       </body>
     </html>
   );

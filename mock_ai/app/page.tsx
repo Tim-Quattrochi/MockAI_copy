@@ -1,9 +1,11 @@
-import Template from "@/components/Template";
+import { Features, Hero, Stats } from "@/components/landing/sections";
 
 export default function Home() {
   return (
-    <main className="overflow-hidden min-h-screen">
-      <Template />
+    <main className="flex-1">
+      <Hero />
+      <Stats />
+      <Features />
     </main>
   );
 }

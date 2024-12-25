@@ -17,9 +17,7 @@ const Footer = () => {
         <Link
           className="text-xs hover:text-[#ff3b9a] transition-colors"
           href="#"
-        >
-          Privacy
-        </Link>
+        ></Link>
       </nav>
     </footer>
   );
