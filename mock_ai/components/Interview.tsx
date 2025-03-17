@@ -10,7 +10,6 @@ import AnalysisCard from "./AnalysisCard";
 import VideoRecorder from "./VideoRecorder";
 import { Skeleton } from "./ui/skeleton";
 import { Button } from "./ui/Button";
-import { Label } from "./ui/label";
 import { Input } from "./ui/Input";
 import {
   Dialog,
@@ -102,7 +101,7 @@ const Interview = () => {
       name: "",
       dreamPosition: "",
       dreamCompany: "",
-      interviewType: "behavioral",
+      interviewType: undefined,
     },
   });
 
