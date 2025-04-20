@@ -52,12 +52,11 @@ export default function RootLayout({
           "min-h-full flex flex-col"
         )}
       >
-        {/* <Header /> */}
-        {/* {children} */}
-        This site is under maintinence. For inquiries please contact
-        timq82@gmail.com
+        <Header />
+        {children}
+
         <Toaster />
-        {/* <Footer /> */}
+        <Footer />
         <Analytics />
       </body>
     </html>

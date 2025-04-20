@@ -39,7 +39,7 @@ export function LoginCard({
             Welcome Back
           </CardTitle>
           <CardDescription className="text-white/90 text-lg">
-            Sign in to continue to AI Chat
+            Sign in to continue to Mock Interview AI
           </CardDescription>
         </CardHeader>
       </div>
